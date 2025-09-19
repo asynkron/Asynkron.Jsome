@@ -1,0 +1,16 @@
+using FluentValidation;
+
+namespace {{Namespace}}.Validators;
+
+/// <summary>
+/// FluentValidation validator for {{ClassName}}
+/// </summary>
+public class {{ClassName}}Validator : AbstractValidator<{{ClassName}}>
+{
+    public {{ClassName}}Validator()
+    {
+{{#each ValidationRules}}
+        {{this}}
+{{/each}}
+    }
+}

@@ -1,5 +1,6 @@
 ﻿using SwaggerGen;
 using SwaggerGen.Models;
+using SwaggerGen.CodeGeneration;
 
 namespace SwaggerGen;
 
@@ -44,6 +45,41 @@ class Program
             // Display the summary
             string summary = SwaggerParser.GetDocumentSummary(document);
             Console.WriteLine(summary);
+
+            Console.WriteLine();
+            Console.WriteLine("Generating C# DTO classes and FluentValidation validators...");
+            Console.WriteLine();
+
+            try
+            {
+                // Generate DTO classes and validators
+                var codeGenerator = new SwaggerCodeGenerator("Generated.DTOs");
+                var generatedFiles = codeGenerator.GenerateCode(document);
+
+                // Create output directory
+                var outputDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Generated");
+                if (Directory.Exists(outputDirectory))
+                {
+                    Directory.Delete(outputDirectory, true);
+                }
+                Directory.CreateDirectory(outputDirectory);
+
+                // Write generated files
+                foreach (var file in generatedFiles)
+                {
+                    var filePath = Path.Combine(outputDirectory, file.Key);
+                    await File.WriteAllTextAsync(filePath, file.Value);
+                    Console.WriteLine($"Generated: {file.Key}");
+                }
+
+                Console.WriteLine();
+                Console.WriteLine($"Code generation completed! Files saved to: {outputDirectory}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during code generation: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
 
             Console.WriteLine();
             Console.WriteLine("Parsing completed successfully!");
