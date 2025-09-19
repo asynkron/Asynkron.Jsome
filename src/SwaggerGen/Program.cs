@@ -14,25 +14,49 @@ class Program
 
         try
         {
-            // Get the path to the sample swagger file
-            var currentDirectory = Directory.GetCurrentDirectory();
-            var sampleFilePath = Path.Combine(currentDirectory, "Samples", "petstore-swagger.json");
+            // Determine which swagger file to use
+            string sampleFilePath;
             
-            // Check if we're running from the build output directory
-            if (!File.Exists(sampleFilePath))
+            if (args.Length > 0)
             {
-                // Try to find the file relative to the source directory
-                var sourceDirectory = FindSourceDirectory(currentDirectory);
-                if (sourceDirectory != null)
+                // Use file path provided as command line argument
+                sampleFilePath = args[0];
+                if (!Path.IsPathFullyQualified(sampleFilePath))
                 {
-                    sampleFilePath = Path.Combine(sourceDirectory, "Samples", "petstore-swagger.json");
+                    // Make relative paths absolute
+                    sampleFilePath = Path.GetFullPath(sampleFilePath);
+                }
+            }
+            else
+            {
+                // Use default sample file
+                var currentDirectory = Directory.GetCurrentDirectory();
+                sampleFilePath = Path.Combine(currentDirectory, "Samples", "petstore-swagger.json");
+                
+                // Check if we're running from the build output directory
+                if (!File.Exists(sampleFilePath))
+                {
+                    // Try to find the file relative to the source directory
+                    var sourceDirectory = FindSourceDirectory(currentDirectory);
+                    if (sourceDirectory != null)
+                    {
+                        sampleFilePath = Path.Combine(sourceDirectory, "Samples", "petstore-swagger.json");
+                    }
                 }
             }
 
             if (!File.Exists(sampleFilePath))
             {
-                Console.WriteLine($"Sample file not found at: {sampleFilePath}");
-                Console.WriteLine("Please ensure the petstore-swagger.json file exists in the Samples directory.");
+                Console.WriteLine($"Swagger file not found at: {sampleFilePath}");
+                Console.WriteLine();
+                Console.WriteLine("Usage: SwaggerGen [swagger-file-path]");
+                Console.WriteLine("  swagger-file-path: Path to a Swagger 2.0 JSON file (optional)");
+                Console.WriteLine();
+                Console.WriteLine("Examples:");
+                Console.WriteLine("  SwaggerGen");
+                Console.WriteLine("  SwaggerGen petstore-swagger.json");
+                Console.WriteLine("  SwaggerGen /path/to/my-api.json");
+                Console.WriteLine("  SwaggerGen testdata/stripe-swagger.json");
                 return;
             }
 
