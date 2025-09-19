@@ -121,6 +121,20 @@ public class CodeGenerator
 
     private PropertyInfo ConvertPropertyToPropertyInfo(string name, Schema schema, List<string> requiredFields)
     {
+        // Handle null schema
+        if (schema == null)
+        {
+            return new PropertyInfo
+            {
+                Name = ToPascalCase(name),
+                JsonPropertyName = name,
+                Type = "object",
+                Description = "",
+                IsRequired = requiredFields?.Contains(name) ?? false,
+                ValidationRules = new List<ValidationRule>()
+            };
+        }
+
         var propertyInfo = new PropertyInfo
         {
             Name = ToPascalCase(name),
@@ -151,6 +165,12 @@ public class CodeGenerator
         if (isRequired)
         {
             rules.Add(new ValidationRule { Rule = "NotEmpty" });
+        }
+
+        // Handle null schema
+        if (schema == null)
+        {
+            return rules;
         }
 
         if (schema.MinLength.HasValue)
@@ -203,7 +223,23 @@ public class CodeGenerator
 
     private string MapSwaggerTypeToCSharpType(Schema schema)
     {
-        return schema.Type.ToLower() switch
+        // Handle null schema
+        if (schema == null)
+        {
+            return "object";
+        }
+
+        // Handle $ref references
+        if (!string.IsNullOrEmpty(schema.Ref))
+        {
+            var refName = schema.Ref.Replace("#/definitions/", "");
+            return refName;
+        }
+
+        // Handle cases where Type might be null or empty
+        var schemaType = schema.Type?.ToLower() ?? "object";
+        
+        return schemaType switch
         {
             "integer" => schema.Format == "int64" ? "long" : "int",
             "number" => schema.Format == "float" ? "float" : "decimal",
