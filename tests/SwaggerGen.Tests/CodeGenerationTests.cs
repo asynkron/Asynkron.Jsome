@@ -395,4 +395,215 @@ public class CodeGenerationTests
         Assert.Contains("Allowed values: active, inactive, pending", dto);
         Assert.Contains("Allowed values: 1, 2, 3", dto);
     }
+
+    [Fact]
+    public void CodeGenerator_GeneratesEnumsAndConstants_WhenGenerateEnumTypesEnabled()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["TestModel"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["stringEnum"] = new Schema 
+                        { 
+                            Type = "string",
+                            Enum = new List<object> { "option1", "option2", "option3" }
+                        },
+                        ["integerEnum"] = new Schema
+                        {
+                            Type = "integer",
+                            Enum = new List<object> { 10, 20, 30 }
+                        }
+                    }
+                }
+            }
+        };
+
+        var options = new CodeGenerationOptions { GenerateEnumTypes = true };
+        var generator = new CodeGenerator(options);
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        Assert.Single(result.DtoClasses);
+        Assert.Single(result.EnumTypes);
+        Assert.Single(result.ConstantClasses);
+        
+        // Check enum generation
+        var enumCode = result.EnumTypes.Values.First();
+        Assert.Contains("public enum TestModelIntegerEnum", enumCode);
+        Assert.Contains("Value10 = 10", enumCode);
+        Assert.Contains("Value20 = 20", enumCode);
+        Assert.Contains("Value30 = 30", enumCode);
+        
+        // Check constants generation
+        var constantsCode = result.ConstantClasses.Values.First();
+        Assert.Contains("public static class TestModelStringEnumConstants", constantsCode);
+        Assert.Contains("public const string OPTION1 = \"option1\"", constantsCode);
+        Assert.Contains("public const string OPTION2 = \"option2\"", constantsCode);
+        Assert.Contains("public const string OPTION3 = \"option3\"", constantsCode);
+        
+        // Check DTO uses correct types
+        var dto = result.DtoClasses["TestModel"];
+        Assert.Contains("public string StringEnum { get; set; }", dto);
+        Assert.Contains("public TestModelIntegerEnum IntegerEnum { get; set; }", dto);
+        
+        // Check documentation references
+        Assert.Contains("Uses enum type: <see cref=\"TestModelIntegerEnum\"/>", dto);
+        Assert.Contains("Allowed values defined in: <see cref=\"TestModelStringEnumConstants\"/>", dto);
+    }
+
+    [Fact]
+    public void CodeGenerator_GeneratesImprovedValidation_WhenGenerateEnumTypesEnabled()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["ValidationTest"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["status"] = new Schema 
+                        { 
+                            Type = "string",
+                            Enum = new List<object> { "active", "inactive" }
+                        },
+                        ["priority"] = new Schema
+                        {
+                            Type = "integer",
+                            Enum = new List<object> { 1, 2, 3 }
+                        }
+                    }
+                }
+            }
+        };
+
+        var options = new CodeGenerationOptions { GenerateEnumTypes = true };
+        var generator = new CodeGenerator(options);
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        var validator = result.Validators["ValidationTest"];
+        
+        // String enum validation uses direct string comparison
+        Assert.Contains(".Must(x =&gt; new[] { &quot;active&quot;, &quot;inactive&quot; }.Contains(x))", validator);
+        
+        // Integer enum validation uses Enum.IsDefined
+        Assert.Contains(".Must(x =&gt; Enum.IsDefined(typeof(ValidationTestPriority), x))", validator);
+        Assert.Contains("Must be a valid ValidationTestPriority value", validator);
+    }
+
+    [Fact]
+    public void CodeGenerator_BackwardCompatible_WhenGenerateEnumTypesDisabled()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["BackwardTest"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["status"] = new Schema 
+                        { 
+                            Type = "string",
+                            Enum = new List<object> { "active", "inactive" }
+                        },
+                        ["priority"] = new Schema
+                        {
+                            Type = "integer",
+                            Enum = new List<object> { 1, 2, 3 }
+                        }
+                    }
+                }
+            }
+        };
+
+        var options = new CodeGenerationOptions { GenerateEnumTypes = false };
+        var generator = new CodeGenerator(options);
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        Assert.Empty(result.EnumTypes);
+        Assert.Empty(result.ConstantClasses);
+        
+        var dto = result.DtoClasses["BackwardTest"];
+        Assert.Contains("public string Status { get; set; }", dto);
+        Assert.Contains("public int Priority { get; set; }", dto);
+        
+        // Should use legacy documentation
+        Assert.Contains("Allowed values: active, inactive", dto);
+        Assert.Contains("Allowed values: 1, 2, 3", dto);
+        
+        // Should use legacy validation
+        var validator = result.Validators["BackwardTest"];
+        Assert.Contains(".Must(x =&gt; new[] { &quot;active&quot;, &quot;inactive&quot; }.Contains(x.ToString()))", validator);
+        Assert.Contains(".Must(x =&gt; new[] { &quot;1&quot;, &quot;2&quot;, &quot;3&quot; }.Contains(x.ToString()))", validator);
+    }
+
+    [Fact]
+    public void CodeGenerator_HandlesComplexEnumNames()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["ComplexNaming"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["kebab-case-field"] = new Schema
+                        {
+                            Type = "integer",
+                            Enum = new List<object> { 1, 2 }
+                        },
+                        ["snake_case_field"] = new Schema
+                        {
+                            Type = "string",
+                            Enum = new List<object> { "value-with-dash", "value_with_underscore", "123-numeric" }
+                        }
+                    }
+                }
+            }
+        };
+
+        var options = new CodeGenerationOptions { GenerateEnumTypes = true };
+        var generator = new CodeGenerator(options);
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        // Check that enum names are properly converted to PascalCase
+        Assert.Contains("public enum ComplexNamingKebabCaseField", result.EnumTypes.Values.First());
+        Assert.Contains("public static class ComplexNamingSnakeCaseFieldConstants", result.ConstantClasses.Values.First());
+        
+        // Check that enum value names handle special characters
+        var enumCode = result.EnumTypes.Values.First();
+        Assert.Contains("Value1 = 1", enumCode);
+        Assert.Contains("Value2 = 2", enumCode);
+        
+        // Check that constant names handle special characters  
+        var constantsCode = result.ConstantClasses.Values.First();
+        Assert.Contains("VALUE_WITH_DASH", constantsCode);
+        Assert.Contains("VALUE_WITH_UNDERSCORE", constantsCode);
+        Assert.Contains("VALUE_123_NUMERIC", constantsCode);
+    }
 }

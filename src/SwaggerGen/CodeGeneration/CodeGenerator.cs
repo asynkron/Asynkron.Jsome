@@ -414,7 +414,7 @@ public class CodeGenerator
         }
 
         // Generate validation rules
-        propertyInfo.ValidationRules = GenerateValidationRules(schema, requiredFields?.Contains(name) ?? false);
+        propertyInfo.ValidationRules = GenerateValidationRules(schema, requiredFields?.Contains(name) ?? false, propertyInfo.EnumTypeName, propertyInfo.ConstantsClassName);
 
         // Set default value if available
         if (schema.Default != null)
@@ -537,6 +537,149 @@ public class CodeGenerator
                 Parameters = new List<string> { $"x => new[] {{ {enumValues} }}.Contains(x.ToString())" },
                 Message = $"Must be one of: {enumValues}"
             });
+        }
+
+        return rules;
+    }
+
+    private List<ValidationRule> GenerateValidationRules(Schema schema, bool isRequired, string? enumTypeName, string? constantsClassName)
+    {
+        var rules = new List<ValidationRule>();
+
+        if (isRequired)
+        {
+            rules.Add(new ValidationRule { Rule = "NotEmpty" });
+        }
+
+        // Handle null schema
+        if (schema == null)
+        {
+            return rules;
+        }
+
+        if (schema.MinLength.HasValue)
+        {
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "MinimumLength", 
+                Parameters = new List<string> { schema.MinLength.Value.ToString() }
+            });
+        }
+
+        if (schema.MaxLength.HasValue)
+        {
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "MaximumLength", 
+                Parameters = new List<string> { schema.MaxLength.Value.ToString() }
+            });
+        }
+
+        if (schema.Minimum.HasValue)
+        {
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "GreaterThanOrEqualTo", 
+                Parameters = new List<string> { schema.Minimum.Value.ToString() }
+            });
+        }
+
+        if (schema.Maximum.HasValue)
+        {
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "LessThanOrEqualTo", 
+                Parameters = new List<string> { schema.Maximum.Value.ToString() }
+            });
+        }
+
+        if (!string.IsNullOrEmpty(schema.Pattern))
+        {
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "Matches", 
+                Parameters = new List<string> { $"\"{schema.Pattern}\"" }
+            });
+        }
+
+        // Array validation constraints
+        if (schema.MinItems.HasValue)
+        {
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "Must", 
+                Parameters = new List<string> { $"x => x.Count >= {schema.MinItems.Value}" },
+                Message = $"Must contain at least {schema.MinItems.Value} items"
+            });
+        }
+
+        if (schema.MaxItems.HasValue)
+        {
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "Must", 
+                Parameters = new List<string> { $"x => x.Count <= {schema.MaxItems.Value}" },
+                Message = $"Must contain at most {schema.MaxItems.Value} items"
+            });
+        }
+
+        if (schema.UniqueItems == true)
+        {
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "Must", 
+                Parameters = new List<string> { "x => x.Distinct().Count() == x.Count" },
+                Message = "All items must be unique"
+            });
+        }
+
+        // Number validation constraints
+        if (schema.MultipleOf.HasValue)
+        {
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "Must", 
+                Parameters = new List<string> { $"x => x % {schema.MultipleOf.Value} == 0" },
+                Message = $"Must be a multiple of {schema.MultipleOf.Value}"
+            });
+        }
+
+        // Enum validation - improved for new enum types
+        if (schema.Enum != null && schema.Enum.Count > 0)
+        {
+            if (!string.IsNullOrEmpty(enumTypeName))
+            {
+                // For enum types, use Enum.IsDefined validation
+                rules.Add(new ValidationRule 
+                { 
+                    Rule = "Must", 
+                    Parameters = new List<string> { $"x => Enum.IsDefined(typeof({enumTypeName}), x)" },
+                    Message = $"Must be a valid {enumTypeName} value"
+                });
+            }
+            else if (!string.IsNullOrEmpty(constantsClassName))
+            {
+                // For string constants, validate against the constants class
+                var constantValues = string.Join(", ", schema.Enum.Select(e => $"{constantsClassName}.{GenerateConstantName(e.ToString() ?? "")}"));
+                var enumValues = string.Join(", ", schema.Enum.Select(e => $"\"{e}\""));
+                rules.Add(new ValidationRule 
+                { 
+                    Rule = "Must", 
+                    Parameters = new List<string> { $"x => new[] {{ {enumValues} }}.Contains(x)" },
+                    Message = $"Must be one of: {enumValues}"
+                });
+            }
+            else
+            {
+                // Fallback to original validation for backward compatibility
+                var enumValues = string.Join(", ", schema.Enum.Select(e => $"\"{e}\""));
+                rules.Add(new ValidationRule 
+                { 
+                    Rule = "Must", 
+                    Parameters = new List<string> { $"x => new[] {{ {enumValues} }}.Contains(x.ToString())" },
+                    Message = $"Must be one of: {enumValues}"
+                });
+            }
         }
 
         return rules;
