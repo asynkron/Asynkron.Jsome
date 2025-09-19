@@ -24,7 +24,13 @@ public class SwaggerParser
 
         try
         {
-            var document = JsonConvert.DeserializeObject<SwaggerDocument>(json);
+            // Create settings to disable reference handling so $ref is treated as a regular property
+            var settings = new JsonSerializerSettings
+            {
+                MetadataPropertyHandling = MetadataPropertyHandling.Ignore
+            };
+            
+            var document = JsonConvert.DeserializeObject<SwaggerDocument>(json, settings);
             
             if (document == null)
             {

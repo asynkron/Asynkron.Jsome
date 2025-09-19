@@ -1,6 +1,7 @@
 using SwaggerGen.CodeGeneration;
 using SwaggerGen.Models;
 using Xunit;
+using System.IO;
 
 namespace SwaggerGen.Tests;
 
@@ -171,5 +172,90 @@ public class CodeGenerationTests
         Assert.Contains(".GreaterThanOrEqualTo(0)", validator);
         Assert.Contains(".LessThanOrEqualTo(100)", validator);
         Assert.Contains(@".Matches(&quot;^\d{3}-\d{2}-\d{4}$&quot;)", validator);
+    }
+
+    [Fact]
+    public void CodeGenerator_HandlesRefProperties()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["User"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["address"] = new Schema { Ref = "#/definitions/Address" },
+                        ["name"] = new Schema { Type = "string" }
+                    }
+                },
+                ["Address"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["street"] = new Schema { Type = "string" }
+                    }
+                }
+            }
+        };
+
+        var generator = new CodeGenerator();
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        Assert.Equal(2, result.DtoClasses.Count);
+        var userDto = result.DtoClasses["User"];
+        
+        // Check that the address property uses the correct type
+        Assert.Contains("public Address Address { get; set; }", userDto);
+        Assert.Contains("public string Name { get; set; }", userDto);
+    }
+
+    [Fact]
+    public void CodeGenerator_ProcessesStripeSwaggerSuccessfully()
+    {
+        // Arrange - Load the actual Stripe Swagger file
+        var currentDir = Directory.GetCurrentDirectory();
+        var stripeFilePath = Path.Combine(currentDir, "..", "..", "..", "..", "..", "testdata", "stripe-swagger.json");
+        
+        // Skip test if file doesn't exist (for different test environments)
+        if (!File.Exists(stripeFilePath))
+        {
+            // Try alternative path
+            stripeFilePath = Path.Combine(currentDir, "testdata", "stripe-swagger.json");
+            if (!File.Exists(stripeFilePath))
+            {
+                return; // Skip test if file not found
+            }
+        }
+
+        var json = File.ReadAllText(stripeFilePath);
+        var document = SwaggerParser.Parse(json);
+        var generator = new CodeGenerator();
+
+        // Act
+        var result = generator.GenerateCode(document, "Stripe.Generated");
+
+        // Assert
+        Assert.True(result.DtoClasses.Count > 0, "Should generate DTO classes");
+        Assert.True(result.Validators.Count > 0, "Should generate validators");
+        
+        // Check that Customer class exists and has Address property correctly typed
+        Assert.True(result.DtoClasses.ContainsKey("Customer"), "Should contain Customer class");
+        var customerDto = result.DtoClasses["Customer"];
+        
+        // Verify that $ref properties are properly resolved
+        Assert.Contains("public Address Address { get; set; }", customerDto);
+        Assert.Contains("namespace Stripe.Generated", customerDto);
+        
+        // Check that validators are generated correctly
+        Assert.True(result.Validators.ContainsKey("Customer"), "Should contain Customer validator");
+        var validator = result.Validators["Customer"];
+        Assert.Contains("CustomerValidator : AbstractValidator<Customer>", validator);
     }
 }
