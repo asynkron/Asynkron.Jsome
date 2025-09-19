@@ -1,0 +1,30 @@
+using System.ComponentModel.DataAnnotations;
+using Newtonsoft.Json;
+
+namespace {{Namespace}};
+
+/// <summary>
+/// {{Description}}
+/// </summary>
+public class {{ClassName}}
+{
+{{#each Properties}}
+    /// <summary>
+    /// {{Description}}
+    /// </summary>
+    {{#if JsonPropertyName}}
+    [JsonProperty("{{JsonPropertyName}}")]
+    {{/if}}
+    {{#if IsRequired}}
+    [Required]
+    {{/if}}
+    {{#if MaxLength}}
+    [MaxLength({{MaxLength}})]
+    {{/if}}
+    {{#if MinLength}}
+    [MinLength({{MinLength}})]
+    {{/if}}
+    public {{Type}} {{Name}} { get; set; }{{#if DefaultValue}} = {{DefaultValue}};{{/if}}
+
+{{/each}}
+}
