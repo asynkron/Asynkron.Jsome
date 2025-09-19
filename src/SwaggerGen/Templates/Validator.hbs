@@ -1,0 +1,22 @@
+using FluentValidation;
+
+namespace {{Namespace}}.Validators;
+
+/// <summary>
+/// Validator for {{ClassName}}
+/// </summary>
+public class {{ClassName}}Validator : AbstractValidator<{{ClassName}}>
+{
+    public {{ClassName}}Validator()
+    {
+{{#each Properties}}
+{{#if ValidationRules}}
+        RuleFor(x => x.{{Name}})
+{{#each ValidationRules}}
+            .{{Rule}}{{#if Parameters}}({{#each Parameters}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}){{/if}}{{#if Message}}.WithMessage("{{Message}}"){{/if}}
+{{/each}}
+            ;
+{{/if}}
+{{/each}}
+    }
+}
