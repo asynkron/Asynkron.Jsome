@@ -172,4 +172,46 @@ public class CodeGenerationTests
         Assert.Contains(".LessThanOrEqualTo(100)", validator);
         Assert.Contains(@".Matches(&quot;^\d{3}-\d{2}-\d{4}$&quot;)", validator);
     }
+
+    [Fact]
+    public void CodeGenerator_HandlesRefProperties()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["User"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["address"] = new Schema { Ref = "#/definitions/Address" },
+                        ["name"] = new Schema { Type = "string" }
+                    }
+                },
+                ["Address"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["street"] = new Schema { Type = "string" }
+                    }
+                }
+            }
+        };
+
+        var generator = new CodeGenerator();
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        Assert.Equal(2, result.DtoClasses.Count);
+        var userDto = result.DtoClasses["User"];
+        
+        // Check that the address property uses the correct type
+        Assert.Contains("public Address Address { get; set; }", userDto);
+        Assert.Contains("public string Name { get; set; }", userDto);
+    }
 }
