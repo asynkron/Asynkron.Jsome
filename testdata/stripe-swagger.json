@@ -1,0 +1,1279 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Stripe API",
+    "version": "2024-09-30.acacia",
+    "description": "The Stripe REST API. Please see https://stripe.com/docs/api for more details.",
+    "contact": {
+      "name": "Stripe Dev Platform Team",
+      "url": "https://stripe.com/docs"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "host": "api.stripe.com",
+  "basePath": "/v1",
+  "schemes": ["https"],
+  "consumes": ["application/x-www-form-urlencoded"],
+  "produces": ["application/json"],
+  "securityDefinitions": {
+    "basicAuth": {
+      "type": "basic"
+    },
+    "bearerAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
+  },
+  "security": [
+    {
+      "basicAuth": []
+    },
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/customers": {
+      "get": {
+        "summary": "List customers",
+        "description": "Returns a list of your customers. The customers are returned sorted by creation date, with the most recent customers appearing first.",
+        "operationId": "GetCustomers",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10,
+            "description": "A limit on the number of objects to be returned."
+          },
+          {
+            "name": "starting_after",
+            "in": "query",
+            "type": "string",
+            "description": "A cursor for use in pagination."
+          },
+          {
+            "name": "ending_before",
+            "in": "query",
+            "type": "string",
+            "description": "A cursor for use in pagination."
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "type": "string",
+            "format": "email",
+            "description": "A filter on the list based on the customer's email field."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of customers",
+            "schema": {
+              "$ref": "#/definitions/CustomerList"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a customer",
+        "description": "Creates a new customer object.",
+        "operationId": "PostCustomers",
+        "parameters": [
+          {
+            "name": "customer",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CustomerCreate"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer created successfully",
+            "schema": {
+              "$ref": "#/definitions/Customer"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/customers/{id}": {
+      "get": {
+        "summary": "Retrieve a customer",
+        "description": "Retrieves the details of an existing customer.",
+        "operationId": "GetCustomersId",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "^cus_[a-zA-Z0-9]+$",
+            "description": "Customer ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer details",
+            "schema": {
+              "$ref": "#/definitions/Customer"
+            }
+          },
+          "404": {
+            "description": "Customer not found",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Update a customer",
+        "description": "Updates the specified customer by setting the values of the parameters passed.",
+        "operationId": "PostCustomersId",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "^cus_[a-zA-Z0-9]+$",
+            "description": "Customer ID"
+          },
+          {
+            "name": "customer",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CustomerUpdate"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer updated successfully",
+            "schema": {
+              "$ref": "#/definitions/Customer"
+            }
+          },
+          "404": {
+            "description": "Customer not found",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a customer",
+        "description": "Permanently deletes a customer.",
+        "operationId": "DeleteCustomersId",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "^cus_[a-zA-Z0-9]+$",
+            "description": "Customer ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer deleted successfully",
+            "schema": {
+              "$ref": "#/definitions/DeletedCustomer"
+            }
+          },
+          "404": {
+            "description": "Customer not found",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/charges": {
+      "get": {
+        "summary": "List charges",
+        "description": "Returns a list of charges you've previously created.",
+        "operationId": "GetCharges",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10
+          },
+          {
+            "name": "customer",
+            "in": "query",
+            "type": "string",
+            "pattern": "^cus_[a-zA-Z0-9]+$",
+            "description": "Only return charges for this customer."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of charges",
+            "schema": {
+              "$ref": "#/definitions/ChargeList"
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a charge",
+        "description": "Creates a new charge object.",
+        "operationId": "PostCharges",
+        "parameters": [
+          {
+            "name": "charge",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ChargeCreate"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Charge created successfully",
+            "schema": {
+              "$ref": "#/definitions/Charge"
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Customer": {
+      "type": "object",
+      "required": ["id", "object", "created", "livemode"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^cus_[a-zA-Z0-9]+$",
+          "description": "Unique identifier for the object."
+        },
+        "object": {
+          "type": "string",
+          "enum": ["customer"],
+          "description": "String representing the object's type."
+        },
+        "address": {
+          "$ref": "#/definitions/Address"
+        },
+        "balance": {
+          "type": "integer",
+          "description": "Current balance, if any, being stored on the customer."
+        },
+        "created": {
+          "type": "integer",
+          "format": "unix-time",
+          "description": "Time at which the object was created."
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "pattern": "^[a-z]{3}$",
+          "description": "Three-letter ISO currency code."
+        },
+        "default_source": {
+          "type": "string",
+          "description": "ID of the default payment source for the customer."
+        },
+        "delinquent": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether or not the customer is currently delinquent on a subscription."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 350,
+          "description": "An arbitrary string attached to the object."
+        },
+        "discount": {
+          "$ref": "#/definitions/Discount"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 512,
+          "description": "The customer's email address."
+        },
+        "invoice_prefix": {
+          "type": "string",
+          "maxLength": 12,
+          "description": "The prefix for the customer used to generate unique invoice numbers."
+        },
+        "livemode": {
+          "type": "boolean",
+          "description": "Has the value true if the object exists in live mode or the value false if the object exists in test mode."
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Set of key-value pairs that you can attach to an object."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 256,
+          "description": "The customer's full name or business name."
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "The customer's phone number."
+        },
+        "preferred_locales": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]{2}(-[A-Z]{2})?$"
+          },
+          "description": "The customer's preferred locales (languages)."
+        },
+        "shipping": {
+          "$ref": "#/definitions/Shipping"
+        },
+        "tax_exempt": {
+          "type": "string",
+          "enum": ["none", "exempt", "reverse"],
+          "description": "Describes the customer's tax exemption status."
+        }
+      }
+    },
+    "CustomerCreate": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Address"
+        },
+        "balance": {
+          "type": "integer"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 350
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 512
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "preferred_locales": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]{2}(-[A-Z]{2})?$"
+          }
+        },
+        "shipping": {
+          "$ref": "#/definitions/Shipping"
+        },
+        "source": {
+          "type": "string",
+          "description": "A payment source to attach to the customer."
+        },
+        "tax_exempt": {
+          "type": "string",
+          "enum": ["none", "exempt", "reverse"]
+        }
+      }
+    },
+    "CustomerUpdate": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Address"
+        },
+        "balance": {
+          "type": "integer"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 350
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 512
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "preferred_locales": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]{2}(-[A-Z]{2})?$"
+          }
+        },
+        "shipping": {
+          "$ref": "#/definitions/Shipping"
+        },
+        "tax_exempt": {
+          "type": "string",
+          "enum": ["none", "exempt", "reverse"]
+        }
+      }
+    },
+    "CustomerList": {
+      "type": "object",
+      "required": ["object", "data", "has_more", "url"],
+      "properties": {
+        "object": {
+          "type": "string",
+          "enum": ["list"]
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Customer"
+          }
+        },
+        "has_more": {
+          "type": "boolean",
+          "description": "True if this list has another page of items after this one that can be fetched."
+        },
+        "url": {
+          "type": "string",
+          "description": "The URL where this list can be accessed."
+        }
+      }
+    },
+    "DeletedCustomer": {
+      "type": "object",
+      "required": ["id", "object", "deleted"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^cus_[a-zA-Z0-9]+$"
+        },
+        "object": {
+          "type": "string",
+          "enum": ["customer"]
+        },
+        "deleted": {
+          "type": "boolean",
+          "enum": [true]
+        }
+      }
+    },
+    "Charge": {
+      "type": "object",
+      "required": ["id", "object", "amount", "created", "currency", "livemode", "paid", "status"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^ch_[a-zA-Z0-9]+$",
+          "description": "Unique identifier for the object."
+        },
+        "object": {
+          "type": "string",
+          "enum": ["charge"]
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Amount intended to be collected by this charge."
+        },
+        "amount_captured": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Amount in cents captured."
+        },
+        "amount_refunded": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Amount in cents refunded."
+        },
+        "application": {
+          "type": "string",
+          "description": "ID of the Connect application that created the charge."
+        },
+        "application_fee": {
+          "type": "string",
+          "description": "The application fee (if any) for the charge."
+        },
+        "application_fee_amount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The amount of the application fee (if any) requested for the charge."
+        },
+        "balance_transaction": {
+          "type": "string",
+          "description": "ID of the balance transaction that describes the impact of this charge on your account balance."
+        },
+        "billing_details": {
+          "$ref": "#/definitions/BillingDetails"
+        },
+        "calculated_statement_descriptor": {
+          "type": "string",
+          "maxLength": 22,
+          "description": "The full statement descriptor that is passed to card networks."
+        },
+        "captured": {
+          "type": "boolean",
+          "description": "If the charge was created without capturing, this Boolean represents whether it is still uncaptured or has since been captured."
+        },
+        "created": {
+          "type": "integer",
+          "format": "unix-time",
+          "description": "Time at which the object was created."
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "pattern": "^[a-z]{3}$",
+          "description": "Three-letter ISO currency code."
+        },
+        "customer": {
+          "type": "string",
+          "pattern": "^cus_[a-zA-Z0-9]+$",
+          "description": "ID of the customer this charge is for if one exists."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 350,
+          "description": "An arbitrary string attached to the object."
+        },
+        "disputed": {
+          "type": "boolean",
+          "description": "Whether the charge has been disputed."
+        },
+        "failure_code": {
+          "type": "string",
+          "description": "Error code explaining reason for charge failure if available."
+        },
+        "failure_message": {
+          "type": "string",
+          "description": "Message to user further explaining reason for charge failure if available."
+        },
+        "fraud_details": {
+          "$ref": "#/definitions/FraudDetails"
+        },
+        "invoice": {
+          "type": "string",
+          "description": "ID of the invoice this charge is for if one exists."
+        },
+        "livemode": {
+          "type": "boolean",
+          "description": "Has the value true if the object exists in live mode or the value false if the object exists in test mode."
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Set of key-value pairs that you can attach to an object."
+        },
+        "outcome": {
+          "$ref": "#/definitions/ChargeOutcome"
+        },
+        "paid": {
+          "type": "boolean",
+          "description": "true if the charge succeeded, or was successfully authorized for later capture."
+        },
+        "payment_intent": {
+          "type": "string",
+          "pattern": "^pi_[a-zA-Z0-9]+$",
+          "description": "ID of the PaymentIntent associated with this charge, if one exists."
+        },
+        "payment_method": {
+          "type": "string",
+          "description": "ID of the payment method used in this charge."
+        },
+        "payment_method_details": {
+          "$ref": "#/definitions/PaymentMethodDetails"
+        },
+        "receipt_email": {
+          "type": "string",
+          "format": "email",
+          "description": "This is the email address that the receipt for this charge was sent to."
+        },
+        "receipt_number": {
+          "type": "string",
+          "maxLength": 14,
+          "description": "This is the transaction number that appears on email receipts sent for this charge."
+        },
+        "receipt_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "This is the URL to view the receipt for this charge."
+        },
+        "refunded": {
+          "type": "boolean",
+          "description": "Whether the charge has been fully refunded."
+        },
+        "refunds": {
+          "$ref": "#/definitions/RefundList"
+        },
+        "review": {
+          "type": "string",
+          "description": "ID of the review associated with this charge if one exists."
+        },
+        "shipping": {
+          "$ref": "#/definitions/Shipping"
+        },
+        "source_transfer": {
+          "type": "string",
+          "description": "The transfer ID which created this charge."
+        },
+        "statement_descriptor": {
+          "type": "string",
+          "maxLength": 22,
+          "description": "For card charges, use statement_descriptor_suffix instead."
+        },
+        "statement_descriptor_suffix": {
+          "type": "string",
+          "maxLength": 22,
+          "description": "Provides information about the charge that customers see on their statements."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["succeeded", "pending", "failed"],
+          "description": "The status of the payment is either succeeded, pending, or failed."
+        },
+        "transfer_data": {
+          "$ref": "#/definitions/TransferData"
+        },
+        "transfer_group": {
+          "type": "string",
+          "description": "A string that identifies this transaction as part of a group."
+        }
+      }
+    },
+    "ChargeCreate": {
+      "type": "object",
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Amount intended to be collected by this charge."
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "pattern": "^[a-z]{3}$",
+          "description": "Three-letter ISO currency code."
+        },
+        "customer": {
+          "type": "string",
+          "pattern": "^cus_[a-zA-Z0-9]+$",
+          "description": "The ID of an existing customer that will be charged in this request."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 350,
+          "description": "An arbitrary string which you can attach to a Charge object."
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Set of key-value pairs that you can attach to an object."
+        },
+        "receipt_email": {
+          "type": "string",
+          "format": "email",
+          "description": "The email address to which this charge's receipt will be sent."
+        },
+        "shipping": {
+          "$ref": "#/definitions/Shipping"
+        },
+        "source": {
+          "type": "string",
+          "description": "A payment source to be charged."
+        },
+        "statement_descriptor": {
+          "type": "string",
+          "maxLength": 22,
+          "description": "For card charges, use statement_descriptor_suffix instead."
+        },
+        "statement_descriptor_suffix": {
+          "type": "string",
+          "maxLength": 22,
+          "description": "Provides information about the charge that customers see on their statements."
+        },
+        "transfer_data": {
+          "$ref": "#/definitions/TransferData"
+        },
+        "transfer_group": {
+          "type": "string",
+          "description": "A string that identifies this transaction as part of a group."
+        }
+      }
+    },
+    "ChargeList": {
+      "type": "object",
+      "required": ["object", "data", "has_more", "url"],
+      "properties": {
+        "object": {
+          "type": "string",
+          "enum": ["list"]
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Charge"
+          }
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "Address": {
+      "type": "object",
+      "properties": {
+        "city": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "City, district, suburb, town, or village."
+        },
+        "country": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 2,
+          "pattern": "^[A-Z]{2}$",
+          "description": "Two-letter country code (ISO 3166-1 alpha-2)."
+        },
+        "line1": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Address line 1 (e.g., street, PO Box, or company name)."
+        },
+        "line2": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Address line 2 (e.g., apartment, suite, unit, or building)."
+        },
+        "postal_code": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "ZIP or postal code."
+        },
+        "state": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "State, county, province, or region."
+        }
+      }
+    },
+    "Shipping": {
+      "type": "object",
+      "required": ["address", "name"],
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Address"
+        },
+        "carrier": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "The delivery service that shipped a physical product."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 256,
+          "description": "Recipient name."
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Recipient phone (including extension)."
+        },
+        "tracking_number": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "The tracking number for a physical product."
+        }
+      }
+    },
+    "Discount": {
+      "type": "object",
+      "required": ["object", "coupon", "customer", "start"],
+      "properties": {
+        "object": {
+          "type": "string",
+          "enum": ["discount"]
+        },
+        "coupon": {
+          "$ref": "#/definitions/Coupon"
+        },
+        "customer": {
+          "type": "string",
+          "pattern": "^cus_[a-zA-Z0-9]+$",
+          "description": "The ID of the customer associated with this discount."
+        },
+        "end": {
+          "type": "integer",
+          "format": "unix-time",
+          "description": "If the coupon has a duration of repeating, the date that this discount will end."
+        },
+        "start": {
+          "type": "integer",
+          "format": "unix-time",
+          "description": "Date that the coupon was applied."
+        },
+        "subscription": {
+          "type": "string",
+          "description": "The subscription that this coupon is applied to, if it is applied to a particular subscription."
+        }
+      }
+    },
+    "Coupon": {
+      "type": "object",
+      "required": ["id", "object", "created", "duration", "livemode", "valid"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the object."
+        },
+        "object": {
+          "type": "string",
+          "enum": ["coupon"]
+        },
+        "amount_off": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Amount (in the currency specified) that will be taken off the subtotal of any invoices for this customer."
+        },
+        "created": {
+          "type": "integer",
+          "format": "unix-time",
+          "description": "Time at which the object was created."
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "pattern": "^[a-z]{3}$",
+          "description": "If amount_off has been set, the three-letter ISO currency code for the amount to take off."
+        },
+        "duration": {
+          "type": "string",
+          "enum": ["forever", "once", "repeating"],
+          "description": "One of forever, once, and repeating."
+        },
+        "duration_in_months": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "If duration is repeating, the number of months the coupon applies."
+        },
+        "livemode": {
+          "type": "boolean",
+          "description": "Has the value true if the object exists in live mode or the value false if the object exists in test mode."
+        },
+        "max_redemptions": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum number of times this coupon can be redeemed, in total, across all customers, before it is no longer valid."
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Set of key-value pairs that you can attach to an object."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 256,
+          "description": "Name of the coupon displayed to customers on for instance invoices or receipts."
+        },
+        "percent_off": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Percent that will be taken off the subtotal of any invoices for this customer for the duration of the coupon."
+        },
+        "redeem_by": {
+          "type": "integer",
+          "format": "unix-time",
+          "description": "Date after which the coupon can no longer be redeemed."
+        },
+        "times_redeemed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of times this coupon has been applied to a customer."
+        },
+        "valid": {
+          "type": "boolean",
+          "description": "Taking account of the above properties, whether this coupon can still be applied to a customer."
+        }
+      }
+    },
+    "BillingDetails": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Address"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 256,
+          "description": "Full name."
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Billing phone number (including extension)."
+        }
+      }
+    },
+    "FraudDetails": {
+      "type": "object",
+      "properties": {
+        "stripe_report": {
+          "type": "string",
+          "enum": ["fraudulent", "safe"],
+          "description": "Assessments from Stripe."
+        },
+        "user_report": {
+          "type": "string",
+          "enum": ["fraudulent", "safe"],
+          "description": "Assessments reported by you."
+        }
+      }
+    },
+    "ChargeOutcome": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "network_status": {
+          "type": "string",
+          "enum": ["approved_by_network", "declined_by_network", "not_sent_to_network", "reversed_after_approval"],
+          "description": "Possible values are approved_by_network, declined_by_network, not_sent_to_network, and reversed_after_approval."
+        },
+        "reason": {
+          "type": "string",
+          "description": "An enumerated value providing a more detailed explanation of the outcome's type."
+        },
+        "risk_level": {
+          "type": "string",
+          "enum": ["normal", "elevated", "highest"],
+          "description": "Stripe Radar's evaluation of the riskiness of the payment."
+        },
+        "risk_score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Stripe Radar's evaluation of the riskiness of the payment."
+        },
+        "seller_message": {
+          "type": "string",
+          "description": "Message to help you understand what actions to take in response to this charge."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["authorized", "manual_review", "issuer_declined", "blocked", "invalid"],
+          "description": "Possible values are authorized, manual_review, issuer_declined, blocked, and invalid."
+        }
+      }
+    },
+    "PaymentMethodDetails": {
+      "type": "object",
+      "properties": {
+        "card": {
+          "$ref": "#/definitions/PaymentMethodDetailsCard"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["card", "bank_account", "bitcoin"],
+          "description": "The type of transaction-specific details of the payment method used in the payment."
+        }
+      }
+    },
+    "PaymentMethodDetailsCard": {
+      "type": "object",
+      "properties": {
+        "brand": {
+          "type": "string",
+          "enum": ["amex", "diners", "discover", "jcb", "mastercard", "unionpay", "visa", "unknown"],
+          "description": "Card brand."
+        },
+        "checks": {
+          "$ref": "#/definitions/PaymentMethodDetailsCardChecks"
+        },
+        "country": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 2,
+          "pattern": "^[A-Z]{2}$",
+          "description": "Two-letter ISO code representing the country of the card."
+        },
+        "exp_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "Two-digit number representing the card's expiration month."
+        },
+        "exp_year": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 9999,
+          "description": "Four-digit number representing the card's expiration year."
+        },
+        "fingerprint": {
+          "type": "string",
+          "description": "Uniquely identifies this particular card number."
+        },
+        "funding": {
+          "type": "string",
+          "enum": ["credit", "debit", "prepaid", "unknown"],
+          "description": "Card funding type."
+        },
+        "last4": {
+          "type": "string",
+          "pattern": "^[0-9]{4}$",
+          "description": "The last four digits of the card."
+        },
+        "network": {
+          "type": "string",
+          "enum": ["amex", "cartes_bancaires", "diners", "discover", "interac", "jcb", "mastercard", "unionpay", "visa", "unknown"],
+          "description": "Identifies which network this charge was processed on."
+        }
+      }
+    },
+    "PaymentMethodDetailsCardChecks": {
+      "type": "object",
+      "properties": {
+        "address_line1_check": {
+          "type": "string",
+          "enum": ["pass", "fail", "unavailable", "unchecked"],
+          "description": "If a address line1 was provided, results of the check."
+        },
+        "address_postal_code_check": {
+          "type": "string",
+          "enum": ["pass", "fail", "unavailable", "unchecked"],
+          "description": "If a address postal code was provided, results of the check."
+        },
+        "cvc_check": {
+          "type": "string",
+          "enum": ["pass", "fail", "unavailable", "unchecked"],
+          "description": "If a CVC was provided, results of the check."
+        }
+      }
+    },
+    "RefundList": {
+      "type": "object",
+      "required": ["object", "data", "has_more", "url"],
+      "properties": {
+        "object": {
+          "type": "string",
+          "enum": ["list"]
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Refund"
+          }
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "Refund": {
+      "type": "object",
+      "required": ["id", "object", "amount", "charge", "created", "currency", "metadata", "status"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^re_[a-zA-Z0-9]+$",
+          "description": "Unique identifier for the object."
+        },
+        "object": {
+          "type": "string",
+          "enum": ["refund"]
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Amount, in cents."
+        },
+        "balance_transaction": {
+          "type": "string",
+          "description": "Balance transaction that describes the impact on your account balance."
+        },
+        "charge": {
+          "type": "string",
+          "pattern": "^ch_[a-zA-Z0-9]+$",
+          "description": "ID of the charge that was refunded."
+        },
+        "created": {
+          "type": "integer",
+          "format": "unix-time",
+          "description": "Time at which the object was created."
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3,
+          "pattern": "^[a-z]{3}$",
+          "description": "Three-letter ISO currency code."
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Set of key-value pairs that you can attach to an object."
+        },
+        "reason": {
+          "type": "string",
+          "enum": ["duplicate", "fraudulent", "requested_by_customer"],
+          "description": "Reason for the refund."
+        },
+        "receipt_number": {
+          "type": "string",
+          "description": "This is the transaction number that appears on email receipts sent for this refund."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "succeeded", "failed", "canceled"],
+          "description": "Status of the refund."
+        }
+      }
+    },
+    "TransferData": {
+      "type": "object",
+      "required": ["destination"],
+      "properties": {
+        "amount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Amount intended to be collected by this charge."
+        },
+        "destination": {
+          "type": "string",
+          "pattern": "^acct_[a-zA-Z0-9]+$",
+          "description": "ID of the Stripe account the charge will be transferred to."
+        }
+      }
+    },
+    "Error": {
+      "type": "object",
+      "required": ["error"],
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "charge": {
+              "type": "string",
+              "description": "For card errors, the ID of the failed charge."
+            },
+            "code": {
+              "type": "string",
+              "description": "For some errors that could be handled programmatically, a short string indicating the error code reported."
+            },
+            "decline_code": {
+              "type": "string",
+              "description": "For card errors resulting from a card issuer decline, a short string indicating the card issuer's reason for the decline if they provide one."
+            },
+            "doc_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "A URL to more information about the error code reported."
+            },
+            "message": {
+              "type": "string",
+              "description": "A human-readable message providing more details about the error."
+            },
+            "param": {
+              "type": "string",
+              "description": "If the error is parameter-specific, the parameter related to the error."
+            },
+            "type": {
+              "type": "string",
+              "enum": ["api_error", "card_error", "idempotency_error", "invalid_request_error"],
+              "description": "The type of error returned."
+            }
+          }
+        }
+      }
+    }
+  }
+}
