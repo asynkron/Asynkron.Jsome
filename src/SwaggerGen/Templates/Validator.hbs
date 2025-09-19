@@ -1,0 +1,20 @@
+using FluentValidation;
+
+{{#if Description}}
+/// <summary>
+/// Validator for {{ClassName}}{{#if Description}} - {{Description}}{{/if}}
+/// </summary>
+{{/if}}
+public class {{ClassName}}Validator : AbstractValidator<{{ClassName}}>
+{
+    public {{ClassName}}Validator()
+    {
+{{#each Properties}}
+{{#if ValidationRules}}
+{{#each ValidationRules}}
+        {{{this}}}
+{{/each}}
+{{/if}}
+{{/each}}
+    }
+}

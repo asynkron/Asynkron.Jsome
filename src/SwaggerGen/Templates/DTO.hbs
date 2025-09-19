@@ -1,0 +1,23 @@
+using System.ComponentModel.DataAnnotations;
+{{#if Description}}
+/// <summary>
+/// {{Description}}
+/// </summary>
+{{/if}}
+public class {{ClassName}}{{#if BaseClass}} : {{BaseClass}}{{/if}}
+{
+{{#each Properties}}
+{{#if Description}}
+    /// <summary>
+    /// {{Description}}
+    /// </summary>
+{{/if}}
+{{#if ValidationAttributes}}
+{{#each ValidationAttributes}}
+    {{this}}
+{{/each}}
+{{/if}}
+    public {{Type}} {{Name}} { get; set; }{{#if DefaultValue}} = {{DefaultValue}};{{/if}}
+
+{{/each}}
+}

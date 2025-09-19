@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="Handlebars.Net" Version="2.1.6" />
+    <PackageReference Include="FluentValidation" Version="11.8.1" />
   </ItemGroup>
 
 </Project>
