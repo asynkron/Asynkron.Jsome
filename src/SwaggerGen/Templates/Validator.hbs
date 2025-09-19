@@ -1,0 +1,38 @@
+using FluentValidation;
+
+namespace {{Namespace}}.Validators
+{
+    /// <summary>
+    /// Validator for {{ClassName}}
+    /// </summary>
+    public class {{ClassName}}Validator : AbstractValidator<{{ClassName}}>
+    {
+        public {{ClassName}}Validator()
+        {
+            {{#each Properties}}
+            {{#if IsRequired}}
+            RuleFor(x => x.{{Name}}).NotEmpty(){{#if Description}}.WithMessage("{{Description}}"){{/if}};
+            {{/if}}
+            {{#if MaxLength}}
+            RuleFor(x => x.{{Name}}).MaximumLength({{MaxLength}}){{#if MinLength}}.MinimumLength({{MinLength}}){{/if}};
+            {{/if}}
+            {{#if Pattern}}
+            RuleFor(x => x.{{Name}}).Matches(@"{{Pattern}}");
+            {{/if}}
+            {{#if Minimum}}
+            RuleFor(x => x.{{Name}}).GreaterThanOrEqualTo({{Minimum}});
+            {{/if}}
+            {{#if Maximum}}
+            RuleFor(x => x.{{Name}}).LessThanOrEqualTo({{Maximum}});
+            {{/if}}
+            {{#if IsNestedObject}}
+            RuleFor(x => x.{{Name}}).SetValidator(new {{Type}}Validator());
+            {{/if}}
+            {{#if IsArray}}
+            RuleForEach(x => x.{{Name}}){{#if ArrayItemValidator}}.SetValidator(new {{ArrayItemValidator}}()){{/if}};
+            {{/if}}
+
+            {{/each}}
+        }
+    }
+}
