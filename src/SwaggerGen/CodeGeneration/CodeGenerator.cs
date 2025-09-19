@@ -143,7 +143,14 @@ public class CodeGenerator
             Description = schema.Description ?? "",
             IsRequired = requiredFields?.Contains(name) ?? false,
             MaxLength = schema.MaxLength,
-            MinLength = schema.MinLength
+            MinLength = schema.MinLength,
+            MaxItems = schema.MaxItems,
+            MinItems = schema.MinItems,
+            UniqueItems = schema.UniqueItems,
+            MaxProperties = schema.MaxProperties,
+            MinProperties = schema.MinProperties,
+            MultipleOf = schema.MultipleOf,
+            EnumValues = schema.Enum ?? new List<object>()
         };
 
         // Generate validation rules
@@ -215,6 +222,60 @@ public class CodeGenerator
             { 
                 Rule = "Matches", 
                 Parameters = new List<string> { $"\"{schema.Pattern}\"" }
+            });
+        }
+
+        // Array validation constraints
+        if (schema.MinItems.HasValue)
+        {
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "Must", 
+                Parameters = new List<string> { $"x => x.Count >= {schema.MinItems.Value}" },
+                Message = $"Must contain at least {schema.MinItems.Value} items"
+            });
+        }
+
+        if (schema.MaxItems.HasValue)
+        {
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "Must", 
+                Parameters = new List<string> { $"x => x.Count <= {schema.MaxItems.Value}" },
+                Message = $"Must contain at most {schema.MaxItems.Value} items"
+            });
+        }
+
+        if (schema.UniqueItems == true)
+        {
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "Must", 
+                Parameters = new List<string> { "x => x.Distinct().Count() == x.Count" },
+                Message = "All items must be unique"
+            });
+        }
+
+        // Number validation constraints
+        if (schema.MultipleOf.HasValue)
+        {
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "Must", 
+                Parameters = new List<string> { $"x => x % {schema.MultipleOf.Value} == 0" },
+                Message = $"Must be a multiple of {schema.MultipleOf.Value}"
+            });
+        }
+
+        // Enum validation
+        if (schema.Enum != null && schema.Enum.Count > 0)
+        {
+            var enumValues = string.Join(", ", schema.Enum.Select(e => $"\"{e}\""));
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "Must", 
+                Parameters = new List<string> { $"x => new[] {{ {enumValues} }}.Contains(x.ToString())" },
+                Message = $"Must be one of: {enumValues}"
             });
         }
 

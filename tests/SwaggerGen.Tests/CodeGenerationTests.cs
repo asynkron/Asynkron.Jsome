@@ -258,4 +258,141 @@ public class CodeGenerationTests
         var validator = result.Validators["Customer"];
         Assert.Contains("CustomerValidator : AbstractValidator<Customer>", validator);
     }
+
+    [Fact]
+    public void CodeGenerator_HandlesArrayValidationConstraints()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["ArrayTest"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["tags"] = new Schema 
+                        { 
+                            Type = "array",
+                            Items = new Schema { Type = "string" },
+                            MinItems = 1,
+                            MaxItems = 5,
+                            UniqueItems = true
+                        },
+                        ["numbers"] = new Schema
+                        {
+                            Type = "array",
+                            Items = new Schema { Type = "integer" },
+                            MinItems = 2
+                        }
+                    },
+                    Required = new List<string> { "tags" }
+                }
+            }
+        };
+
+        var generator = new CodeGenerator();
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        var validator = result.Validators["ArrayTest"];
+        Assert.Contains(".Must(x =&gt; x.Count &gt;= 1)", validator);
+        Assert.Contains(".Must(x =&gt; x.Count &lt;= 5)", validator);
+        Assert.Contains(".Must(x =&gt; x.Distinct().Count() == x.Count)", validator);
+        Assert.Contains("Must contain at least 1 items", validator);
+        Assert.Contains("Must contain at most 5 items", validator);
+        Assert.Contains("All items must be unique", validator);
+    }
+
+    [Fact]
+    public void CodeGenerator_HandlesNumberValidationConstraints()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["NumberTest"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["percentage"] = new Schema 
+                        { 
+                            Type = "number",
+                            MultipleOf = 0.5m,
+                            Minimum = 0,
+                            Maximum = 100
+                        },
+                        ["count"] = new Schema
+                        {
+                            Type = "integer",
+                            MultipleOf = 5
+                        }
+                    }
+                }
+            }
+        };
+
+        var generator = new CodeGenerator();
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        var validator = result.Validators["NumberTest"];
+        Assert.Contains(".Must(x =&gt; x % 0.5 == 0)", validator);
+        Assert.Contains(".Must(x =&gt; x % 5 == 0)", validator);
+        Assert.Contains("Must be a multiple of 0.5", validator);
+        Assert.Contains("Must be a multiple of 5", validator);
+    }
+
+    [Fact]
+    public void CodeGenerator_HandlesEnumValidationConstraints()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["EnumTest"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["status"] = new Schema 
+                        { 
+                            Type = "string",
+                            Enum = new List<object> { "active", "inactive", "pending" }
+                        },
+                        ["priority"] = new Schema
+                        {
+                            Type = "integer",
+                            Enum = new List<object> { 1, 2, 3 }
+                        }
+                    }
+                }
+            }
+        };
+
+        var generator = new CodeGenerator();
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        var validator = result.Validators["EnumTest"];
+        Assert.Contains(".Must(x =&gt; new[] { &quot;active&quot;, &quot;inactive&quot;, &quot;pending&quot; }.Contains(x.ToString()))", validator);
+        Assert.Contains(".Must(x =&gt; new[] { &quot;1&quot;, &quot;2&quot;, &quot;3&quot; }.Contains(x.ToString()))", validator);
+        Assert.Contains("Must be one of: &quot;active&quot;, &quot;inactive&quot;, &quot;pending&quot;", validator);
+        Assert.Contains("Must be one of: &quot;1&quot;, &quot;2&quot;, &quot;3&quot;", validator);
+        
+        // Check that enum values are documented in DTO
+        var dto = result.DtoClasses["EnumTest"];
+        Assert.Contains("Allowed values: active, inactive, pending", dto);
+        Assert.Contains("Allowed values: 1, 2, 3", dto);
+    }
 }

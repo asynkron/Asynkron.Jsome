@@ -14,6 +14,15 @@ public class PropertyInfo
     public int? MinLength { get; set; }
     public string? DefaultValue { get; set; }
     public List<ValidationRule> ValidationRules { get; set; } = new();
+    
+    // Additional validation properties for arrays, objects, and numbers
+    public int? MaxItems { get; set; }
+    public int? MinItems { get; set; }
+    public bool? UniqueItems { get; set; }
+    public int? MaxProperties { get; set; }
+    public int? MinProperties { get; set; }
+    public decimal? MultipleOf { get; set; }
+    public List<object> EnumValues { get; set; } = new();
 }
 
 /// <summary>
