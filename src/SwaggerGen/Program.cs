@@ -1,5 +1,6 @@
 ﻿using SwaggerGen;
 using SwaggerGen.Models;
+using SwaggerGen.CodeGeneration;
 
 namespace SwaggerGen;
 
@@ -47,6 +48,36 @@ class Program
 
             Console.WriteLine();
             Console.WriteLine("Parsing completed successfully!");
+            
+            // Demonstrate code generation
+            Console.WriteLine();
+            Console.WriteLine("Generating DTOs and Validators...");
+            Console.WriteLine("==================================");
+            
+            var codeGenerator = new SwaggerCodeGenerator("SwaggerGen.Generated");
+            var outputDir = Path.Combine(currentDirectory, "Generated");
+            
+            var result = await codeGenerator.GenerateAsync(document, outputDir, true);
+            
+            if (result.IsSuccess)
+            {
+                Console.WriteLine($"Successfully generated {result.TotalFilesGenerated} files:");
+                foreach (var file in result.GeneratedFiles)
+                {
+                    Console.WriteLine($"  - {Path.GetRelativePath(currentDirectory, file)}");
+                }
+                
+                Console.WriteLine();
+                Console.WriteLine($"Generated {result.GeneratedDtos.Count} DTOs: {string.Join(", ", result.GeneratedDtos)}");
+            }
+            else
+            {
+                Console.WriteLine("Code generation completed with errors:");
+                foreach (var error in result.Errors)
+                {
+                    Console.WriteLine($"  - {error}");
+                }
+            }
         }
         catch (FileNotFoundException ex)
         {

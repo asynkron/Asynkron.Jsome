@@ -1,0 +1,21 @@
+using FluentValidation;
+
+namespace {{Namespace}};
+
+{{#if Description}}
+/// <summary>
+/// Validator for {{DtoClassName}} - {{Description}}
+/// </summary>
+{{/if}}
+public class {{ClassName}} : AbstractValidator<{{DtoClassName}}>
+{
+    public {{ClassName}}()
+    {
+{{#each ValidationRules}}
+        {{#each Rules}}
+        RuleFor(x => x.{{../PropertyName}}){{this}};
+        {{/each}}
+
+{{/each}}
+    }
+}
