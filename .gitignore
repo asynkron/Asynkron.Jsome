@@ -11,6 +11,10 @@
 *.sln.docstates
 *.env
 
+# Generated code output
+Generated/
+TestOutput/
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
