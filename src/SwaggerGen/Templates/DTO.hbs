@@ -11,6 +11,9 @@ public class {{ClassName}}
 {{#each Properties}}
     /// <summary>
     /// {{Description}}
+    /// {{#if EnumValues}}
+    /// Allowed values: {{#each EnumValues}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+    /// {{/if}}
     /// </summary>
     {{#if JsonPropertyName}}
     [JsonProperty("{{JsonPropertyName}}")]
