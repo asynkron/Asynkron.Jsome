@@ -12,15 +12,21 @@ public class CodeGenerator
     private readonly IHandlebars _handlebars;
     private readonly string _dtoTemplate;
     private readonly string _validatorTemplate;
+    private readonly string _enumTemplate;
+    private readonly string _constantsTemplate;
+    private readonly CodeGenerationOptions _options;
 
-    public CodeGenerator()
+    public CodeGenerator(CodeGenerationOptions? options = null)
     {
+        _options = options ?? new CodeGenerationOptions();
         _handlebars = Handlebars.Create();
         
         // Load templates
         var basePath = GetTemplatesPath();
         _dtoTemplate = File.ReadAllText(Path.Combine(basePath, "DTO.hbs"));
         _validatorTemplate = File.ReadAllText(Path.Combine(basePath, "Validator.hbs"));
+        _enumTemplate = File.ReadAllText(Path.Combine(basePath, "Enum.hbs"));
+        _constantsTemplate = File.ReadAllText(Path.Combine(basePath, "Constants.hbs"));
     }
 
     /// <summary>
@@ -32,10 +38,36 @@ public class CodeGenerator
     public CodeGenerationResult GenerateCode(SwaggerDocument document, string targetNamespace = "Generated")
     {
         var result = new CodeGenerationResult();
+        var enumInfos = new Dictionary<string, EnumInfo>();
+        var constantsInfos = new Dictionary<string, ConstantsInfo>();
         
+        // First pass: collect all enum properties and generate enum/constants types
+        if (_options.GenerateEnumTypes)
+        {
+            foreach (var definition in document.Definitions)
+            {
+                CollectEnumTypesFromSchema(definition.Key, definition.Value, targetNamespace, document.Definitions, enumInfos, constantsInfos);
+            }
+            
+            // Generate enum types
+            foreach (var enumInfo in enumInfos.Values)
+            {
+                var enumCode = GenerateEnum(enumInfo);
+                result.EnumTypes.Add(enumInfo.EnumName, enumCode);
+            }
+            
+            // Generate constants classes
+            foreach (var constantsInfo in constantsInfos.Values)
+            {
+                var constantsCode = GenerateConstants(constantsInfo);
+                result.ConstantClasses.Add(constantsInfo.ClassName, constantsCode);
+            }
+        }
+        
+        // Second pass: generate DTOs and validators
         foreach (var definition in document.Definitions)
         {
-            var classInfo = ConvertSchemaToClassInfo(definition.Key, definition.Value, targetNamespace, document.Definitions);
+            var classInfo = ConvertSchemaToClassInfo(definition.Key, definition.Value, targetNamespace, document.Definitions, enumInfos, constantsInfos);
             
             // Generate DTO
             var dtoCode = GenerateDto(classInfo);
@@ -61,7 +93,149 @@ public class CodeGenerator
         return template(classInfo);
     }
 
+    private string GenerateEnum(EnumInfo enumInfo)
+    {
+        var template = _handlebars.Compile(_enumTemplate);
+        return template(enumInfo);
+    }
+
+    private string GenerateConstants(ConstantsInfo constantsInfo)
+    {
+        var template = _handlebars.Compile(_constantsTemplate);
+        return template(constantsInfo);
+    }
+
+    private void CollectEnumTypesFromSchema(string schemaName, Schema schema, string targetNamespace, 
+        Dictionary<string, Schema> allDefinitions,
+        Dictionary<string, EnumInfo> enumInfos,
+        Dictionary<string, ConstantsInfo> constantsInfos)
+    {
+        if (schema.Properties == null) return;
+
+        foreach (var property in schema.Properties)
+        {
+            CollectEnumFromProperty(schemaName, property.Key, property.Value, targetNamespace, enumInfos, constantsInfos);
+        }
+
+        // Handle allOf inheritance
+        if (schema.AllOf?.Any() == true)
+        {
+            foreach (var allOfSchema in schema.AllOf)
+            {
+                if (!string.IsNullOrEmpty(allOfSchema?.Ref))
+                {
+                    var refName = allOfSchema.Ref.Replace("#/definitions/", "");
+                    if (allDefinitions.TryGetValue(refName, out var refSchema))
+                    {
+                        CollectEnumTypesFromSchema(refName, refSchema, targetNamespace, allDefinitions, enumInfos, constantsInfos);
+                    }
+                }
+                else if (allOfSchema?.Properties != null)
+                {
+                    foreach (var property in allOfSchema.Properties)
+                    {
+                        CollectEnumFromProperty(schemaName, property.Key, property.Value, targetNamespace, enumInfos, constantsInfos);
+                    }
+                }
+            }
+        }
+    }
+
+    private void CollectEnumFromProperty(string schemaName, string propertyName, Schema propertySchema, string targetNamespace,
+        Dictionary<string, EnumInfo> enumInfos,
+        Dictionary<string, ConstantsInfo> constantsInfos)
+    {
+        if (propertySchema.Enum == null || propertySchema.Enum.Count == 0) return;
+
+        var propertyType = propertySchema.Type?.ToLower();
+        
+        if (propertyType == "integer")
+        {
+            // Generate enum for integer enums
+            var enumName = $"{ToPascalCase(schemaName)}{ToPascalCase(propertyName)}";
+            if (!enumInfos.ContainsKey(enumName))
+            {
+                var enumInfo = new EnumInfo
+                {
+                    EnumName = enumName,
+                    Namespace = targetNamespace,
+                    Description = $"Enum values for {schemaName}.{propertyName}",
+                    Values = propertySchema.Enum.Select((value, index) => new EnumValueInfo
+                    {
+                        Name = GenerateEnumValueName(value),
+                        Value = value,
+                        Description = $"Value: {value}"
+                    }).ToList()
+                };
+                enumInfos.Add(enumName, enumInfo);
+            }
+        }
+        else if (propertyType == "string")
+        {
+            // Generate constants class for string enums
+            var className = $"{ToPascalCase(schemaName)}{ToPascalCase(propertyName)}Constants";
+            if (!constantsInfos.ContainsKey(className))
+            {
+                var constantsInfo = new ConstantsInfo
+                {
+                    ClassName = className,
+                    Namespace = targetNamespace,
+                    Description = $"Constants for {schemaName}.{propertyName}",
+                    Constants = propertySchema.Enum.Select(value => new ConstantInfo
+                    {
+                        Name = GenerateConstantName(value.ToString() ?? ""),
+                        Value = value.ToString() ?? "",
+                        Description = $"Value: {value}"
+                    }).ToList()
+                };
+                constantsInfos.Add(className, constantsInfo);
+            }
+        }
+    }
+
+    private string GenerateEnumValueName(object value)
+    {
+        var stringValue = value.ToString() ?? "";
+        
+        // Convert to PascalCase and ensure it's a valid C# identifier
+        var name = ToPascalCase(stringValue);
+        
+        // Handle numeric values by prefixing with "Value"
+        if (char.IsDigit(name[0]))
+        {
+            name = "Value" + name;
+        }
+        
+        // Replace invalid characters
+        name = System.Text.RegularExpressions.Regex.Replace(name, @"[^a-zA-Z0-9_]", "");
+        
+        return string.IsNullOrEmpty(name) ? "Unknown" : name;
+    }
+
+    private string GenerateConstantName(string value)
+    {
+        // Convert to UPPER_CASE format for constants
+        var name = value.Replace("-", "_").Replace(" ", "_").ToUpper();
+        
+        // Ensure it starts with a letter or underscore
+        if (name.Length > 0 && char.IsDigit(name[0]))
+        {
+            name = "VALUE_" + name;
+        }
+        
+        // Replace invalid characters
+        name = System.Text.RegularExpressions.Regex.Replace(name, @"[^A-Z0-9_]", "");
+        
+        return string.IsNullOrEmpty(name) ? "UNKNOWN" : name;
+    }
+
     private ClassInfo ConvertSchemaToClassInfo(string name, Schema schema, string targetNamespace, Dictionary<string, Schema> allDefinitions)
+    {
+        return ConvertSchemaToClassInfo(name, schema, targetNamespace, allDefinitions, new Dictionary<string, EnumInfo>(), new Dictionary<string, ConstantsInfo>());
+    }
+
+    private ClassInfo ConvertSchemaToClassInfo(string name, Schema schema, string targetNamespace, Dictionary<string, Schema> allDefinitions,
+        Dictionary<string, EnumInfo> enumInfos, Dictionary<string, ConstantsInfo> constantsInfos)
     {
         var classInfo = new ClassInfo
         {
@@ -85,7 +259,7 @@ public class CodeGenerator
                         {
                             foreach (var property in refSchema.Properties)
                             {
-                                var propertyInfo = ConvertPropertyToPropertyInfo(property.Key, property.Value, refSchema.Required ?? new List<string>());
+                                var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, refSchema.Required ?? new List<string>(), enumInfos, constantsInfos);
                                 classInfo.Properties.Add(propertyInfo);
                             }
                         }
@@ -97,7 +271,7 @@ public class CodeGenerator
                 {
                     foreach (var property in allOfSchema.Properties)
                     {
-                        var propertyInfo = ConvertPropertyToPropertyInfo(property.Key, property.Value, allOfSchema.Required ?? new List<string>());
+                        var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, allOfSchema.Required ?? new List<string>(), enumInfos, constantsInfos);
                         classInfo.Properties.Add(propertyInfo);
                     }
                 }
@@ -110,7 +284,7 @@ public class CodeGenerator
             {
                 foreach (var property in schema.Properties)
                 {
-                    var propertyInfo = ConvertPropertyToPropertyInfo(property.Key, property.Value, schema.Required ?? new List<string>());
+                    var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, schema.Required ?? new List<string>(), enumInfos, constantsInfos);
                     classInfo.Properties.Add(propertyInfo);
                 }
             }
@@ -152,6 +326,92 @@ public class CodeGenerator
             MultipleOf = schema.MultipleOf,
             EnumValues = schema.Enum ?? new List<object>()
         };
+
+        // Generate validation rules
+        propertyInfo.ValidationRules = GenerateValidationRules(schema, requiredFields?.Contains(name) ?? false);
+
+        // Set default value if available
+        if (schema.Default != null)
+        {
+            propertyInfo.DefaultValue = FormatDefaultValue(schema.Default, propertyInfo.Type);
+        }
+
+        return propertyInfo;
+    }
+
+    private PropertyInfo ConvertPropertyToPropertyInfo(string parentSchemaName, string name, Schema schema, List<string> requiredFields,
+        Dictionary<string, EnumInfo> enumInfos, Dictionary<string, ConstantsInfo> constantsInfos)
+    {
+        // For backward compatibility, fall back to the original method if not using enum generation
+        if (!_options.GenerateEnumTypes)
+        {
+            return ConvertPropertyToPropertyInfo(name, schema, requiredFields);
+        }
+
+        // Handle null schema
+        if (schema == null)
+        {
+            return new PropertyInfo
+            {
+                Name = ToPascalCase(name),
+                JsonPropertyName = name,
+                Type = "object",
+                Description = "",
+                IsRequired = requiredFields?.Contains(name) ?? false,
+                ValidationRules = new List<ValidationRule>()
+            };
+        }
+
+        var propertyInfo = new PropertyInfo
+        {
+            Name = ToPascalCase(name),
+            JsonPropertyName = name,
+            Description = schema.Description ?? "",
+            IsRequired = requiredFields?.Contains(name) ?? false,
+            MaxLength = schema.MaxLength,
+            MinLength = schema.MinLength,
+            MaxItems = schema.MaxItems,
+            MinItems = schema.MinItems,
+            UniqueItems = schema.UniqueItems,
+            MaxProperties = schema.MaxProperties,
+            MinProperties = schema.MinProperties,
+            MultipleOf = schema.MultipleOf,
+            EnumValues = schema.Enum ?? new List<object>()
+        };
+
+        // Handle enum type mapping first
+        var typeOverridden = false;
+        if (schema.Enum != null && schema.Enum.Count > 0)
+        {
+            var propertyType = schema.Type?.ToLower();
+            
+            if (propertyType == "integer")
+            {
+                // Use generated enum type
+                var enumName = $"{ToPascalCase(parentSchemaName)}{ToPascalCase(name)}";
+                if (enumInfos.ContainsKey(enumName))
+                {
+                    propertyInfo.Type = enumName;
+                    propertyInfo.EnumTypeName = enumName;
+                    typeOverridden = true;
+                }
+            }
+            else if (propertyType == "string")
+            {
+                // Property stays as string, but we reference the constants class
+                var constantsClassName = $"{ToPascalCase(parentSchemaName)}{ToPascalCase(name)}Constants";
+                if (constantsInfos.ContainsKey(constantsClassName))
+                {
+                    propertyInfo.ConstantsClassName = constantsClassName;
+                }
+            }
+        }
+
+        // Set the type if not overridden by enum handling
+        if (!typeOverridden)
+        {
+            propertyInfo.Type = MapSwaggerTypeToCSharpType(schema);
+        }
 
         // Generate validation rules
         propertyInfo.ValidationRules = GenerateValidationRules(schema, requiredFields?.Contains(name) ?? false);

@@ -23,6 +23,11 @@ public class PropertyInfo
     public int? MinProperties { get; set; }
     public decimal? MultipleOf { get; set; }
     public List<object> EnumValues { get; set; } = new();
+    
+    // Enum generation properties
+    public string? EnumTypeName { get; set; }
+    public string? ConstantsClassName { get; set; }
+    public bool IsEnum => EnumValues.Count > 0;
 }
 
 /// <summary>

@@ -1,0 +1,15 @@
+namespace {{Namespace}};
+
+/// <summary>
+/// {{Description}}
+/// </summary>
+public enum {{EnumName}}
+{
+{{#each Values}}
+    /// <summary>
+    /// {{Description}}
+    /// </summary>
+    {{Name}} = {{Value}}{{#unless @last}},{{/unless}}
+
+{{/each}}
+}
