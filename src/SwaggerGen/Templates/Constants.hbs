@@ -1,0 +1,15 @@
+namespace {{Namespace}};
+
+/// <summary>
+/// {{Description}}
+/// </summary>
+public static class {{ClassName}}
+{
+{{#each Constants}}
+    /// <summary>
+    /// {{Description}}
+    /// </summary>
+    public const string {{Name}} = "{{Value}}";
+
+{{/each}}
+}
