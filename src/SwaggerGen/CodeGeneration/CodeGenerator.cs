@@ -1,5 +1,6 @@
 using HandlebarsDotNet;
 using SwaggerGen.Models;
+using SwaggerGen.Configuration;
 using System.Text;
 
 namespace SwaggerGen.CodeGeneration;
@@ -15,11 +16,15 @@ public class CodeGenerator
     private readonly string _enumTemplate;
     private readonly string _constantsTemplate;
     private readonly CodeGenerationOptions _options;
+    private readonly ModifierConfiguration? _modifierConfig;
 
     public CodeGenerator(CodeGenerationOptions? options = null)
     {
         _options = options ?? new CodeGenerationOptions();
         _handlebars = Handlebars.Create();
+        
+        // Load modifier configuration if specified
+        _modifierConfig = LoadModifierConfiguration();
         
         // Load templates
         var basePath = GetTemplatesPath();
@@ -27,6 +32,28 @@ public class CodeGenerator
         _validatorTemplate = File.ReadAllText(Path.Combine(basePath, "Validator.hbs"));
         _enumTemplate = File.ReadAllText(Path.Combine(basePath, "Enum.hbs"));
         _constantsTemplate = File.ReadAllText(Path.Combine(basePath, "Constants.hbs"));
+    }
+
+    private ModifierConfiguration? LoadModifierConfiguration()
+    {
+        // If configuration instance is provided directly, use it
+        if (_options.ModifierConfiguration != null)
+            return _options.ModifierConfiguration;
+
+        // If configuration path is provided, load from file
+        if (!string.IsNullOrWhiteSpace(_options.ModifierConfigurationPath))
+        {
+            try
+            {
+                return ConfigurationLoader.Load(_options.ModifierConfigurationPath);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to load modifier configuration from '{_options.ModifierConfigurationPath}': {ex.Message}", ex);
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -40,6 +67,13 @@ public class CodeGenerator
         var result = new CodeGenerationResult();
         var enumInfos = new Dictionary<string, EnumInfo>();
         var constantsInfos = new Dictionary<string, ConstantsInfo>();
+        
+        // Apply global configuration settings
+        if (_modifierConfig?.Global != null)
+        {
+            if (!string.IsNullOrEmpty(_modifierConfig.Global.Namespace))
+                targetNamespace = _modifierConfig.Global.Namespace;
+        }
         
         // First pass: collect all enum properties and generate enum/constants types
         if (_options.GenerateEnumTypes)
@@ -67,7 +101,12 @@ public class CodeGenerator
         // Second pass: generate DTOs and validators
         foreach (var definition in document.Definitions)
         {
-            var classInfo = ConvertSchemaToClassInfo(definition.Key, definition.Value, targetNamespace, document.Definitions, enumInfos, constantsInfos);
+            // Check if this class should be included based on configuration
+            var classPath = definition.Key;
+            if (_modifierConfig != null && !_modifierConfig.IsIncluded(classPath))
+                continue;
+            
+            var classInfo = ConvertSchemaToClassInfo(definition.Key, definition.Value, targetNamespace, document.Definitions, enumInfos, constantsInfos, classPath);
             
             // Generate DTO
             var dtoCode = GenerateDto(classInfo);
@@ -231,18 +270,28 @@ public class CodeGenerator
 
     private ClassInfo ConvertSchemaToClassInfo(string name, Schema schema, string targetNamespace, Dictionary<string, Schema> allDefinitions)
     {
-        return ConvertSchemaToClassInfo(name, schema, targetNamespace, allDefinitions, new Dictionary<string, EnumInfo>(), new Dictionary<string, ConstantsInfo>());
+        return ConvertSchemaToClassInfo(name, schema, targetNamespace, allDefinitions, new Dictionary<string, EnumInfo>(), new Dictionary<string, ConstantsInfo>(), name);
     }
 
     private ClassInfo ConvertSchemaToClassInfo(string name, Schema schema, string targetNamespace, Dictionary<string, Schema> allDefinitions,
-        Dictionary<string, EnumInfo> enumInfos, Dictionary<string, ConstantsInfo> constantsInfos)
+        Dictionary<string, EnumInfo> enumInfos, Dictionary<string, ConstantsInfo> constantsInfos, string propertyPath = "")
     {
+        if (string.IsNullOrEmpty(propertyPath))
+            propertyPath = name;
+            
         var classInfo = new ClassInfo
         {
             ClassName = ToPascalCase(name),
             Namespace = targetNamespace,
             Description = schema.Description ?? ""
         };
+
+        // Apply configuration rule for class description override
+        var classRule = _modifierConfig?.GetRule(propertyPath);
+        if (classRule != null && !string.IsNullOrEmpty(classRule.Description))
+        {
+            classInfo.Description = classRule.Description;
+        }
 
         // Handle allOf inheritance (Note: $ref resolution needs enhancement for full inheritance support)
         if (schema.AllOf?.Any() == true)
@@ -259,7 +308,13 @@ public class CodeGenerator
                         {
                             foreach (var property in refSchema.Properties)
                             {
-                                var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, refSchema.Required ?? new List<string>(), enumInfos, constantsInfos);
+                                var propPath = $"{propertyPath}.{property.Key}";
+                                
+                                // Check if property should be included
+                                if (_modifierConfig != null && !_modifierConfig.IsIncluded(propPath))
+                                    continue;
+                                
+                                var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, refSchema.Required ?? new List<string>(), enumInfos, constantsInfos, propPath);
                                 classInfo.Properties.Add(propertyInfo);
                             }
                         }
@@ -271,7 +326,13 @@ public class CodeGenerator
                 {
                     foreach (var property in allOfSchema.Properties)
                     {
-                        var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, allOfSchema.Required ?? new List<string>(), enumInfos, constantsInfos);
+                        var propPath = $"{propertyPath}.{property.Key}";
+                        
+                        // Check if property should be included
+                        if (_modifierConfig != null && !_modifierConfig.IsIncluded(propPath))
+                            continue;
+                        
+                        var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, allOfSchema.Required ?? new List<string>(), enumInfos, constantsInfos, propPath);
                         classInfo.Properties.Add(propertyInfo);
                     }
                 }
@@ -284,7 +345,13 @@ public class CodeGenerator
             {
                 foreach (var property in schema.Properties)
                 {
-                    var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, schema.Required ?? new List<string>(), enumInfos, constantsInfos);
+                    var propPath = $"{propertyPath}.{property.Key}";
+                    
+                    // Check if property should be included
+                    if (_modifierConfig != null && !_modifierConfig.IsIncluded(propPath))
+                        continue;
+                    
+                    var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, schema.Required ?? new List<string>(), enumInfos, constantsInfos, propPath);
                     classInfo.Properties.Add(propertyInfo);
                 }
             }
@@ -340,10 +407,10 @@ public class CodeGenerator
     }
 
     private PropertyInfo ConvertPropertyToPropertyInfo(string parentSchemaName, string name, Schema schema, List<string> requiredFields,
-        Dictionary<string, EnumInfo> enumInfos, Dictionary<string, ConstantsInfo> constantsInfos)
+        Dictionary<string, EnumInfo> enumInfos, Dictionary<string, ConstantsInfo> constantsInfos, string propertyPath = "")
     {
-        // For backward compatibility, fall back to the original method if not using enum generation
-        if (!_options.GenerateEnumTypes)
+        // For backward compatibility, fall back to the original method if not using enum generation and no modifier config
+        if (!_options.GenerateEnumTypes && _modifierConfig == null)
         {
             return ConvertPropertyToPropertyInfo(name, schema, requiredFields);
         }
@@ -379,9 +446,45 @@ public class CodeGenerator
             EnumValues = schema.Enum ?? new List<object>()
         };
 
-        // Handle enum type mapping first
-        var typeOverridden = false;
-        if (schema.Enum != null && schema.Enum.Count > 0)
+        // Apply configuration rules
+        var rule = _modifierConfig?.GetRule(propertyPath);
+        if (rule != null)
+        {
+            // Override description if specified
+            if (!string.IsNullOrEmpty(rule.Description))
+            {
+                propertyInfo.Description = rule.Description;
+            }
+
+            // Override type if specified
+            if (!string.IsNullOrEmpty(rule.Type))
+            {
+                propertyInfo.Type = rule.Type;
+                if (rule.Default != null)
+                    propertyInfo.DefaultValue = FormatDefaultValue(rule.Default, rule.Type);
+            }
+            
+            // Override default value if specified
+            else if (rule.Default != null)
+            {
+                propertyInfo.DefaultValue = FormatDefaultValue(rule.Default, propertyInfo.Type);
+            }
+
+            // Apply validation overrides
+            if (rule.Validation != null)
+            {
+                if (rule.Validation.Required.HasValue)
+                    propertyInfo.IsRequired = rule.Validation.Required.Value;
+                if (rule.Validation.MinLength.HasValue)
+                    propertyInfo.MinLength = rule.Validation.MinLength.Value;
+                if (rule.Validation.MaxLength.HasValue)
+                    propertyInfo.MaxLength = rule.Validation.MaxLength.Value;
+            }
+        }
+
+        // Handle enum type mapping first (only if type wasn't overridden by configuration)
+        var typeOverridden = !string.IsNullOrEmpty(rule?.Type);
+        if (!typeOverridden && schema.Enum != null && schema.Enum.Count > 0)
         {
             var propertyType = schema.Type?.ToLower();
             
@@ -414,7 +517,7 @@ public class CodeGenerator
         }
 
         // Generate validation rules
-        propertyInfo.ValidationRules = GenerateValidationRules(schema, requiredFields?.Contains(name) ?? false, propertyInfo.EnumTypeName, propertyInfo.ConstantsClassName);
+        propertyInfo.ValidationRules = GenerateValidationRules(schema, propertyInfo.IsRequired, propertyInfo.EnumTypeName, propertyInfo.ConstantsClassName, rule);
 
         // Set default value if available
         if (schema.Default != null)
@@ -427,210 +530,156 @@ public class CodeGenerator
 
     private List<ValidationRule> GenerateValidationRules(Schema schema, bool isRequired)
     {
-        var rules = new List<ValidationRule>();
-
-        if (isRequired)
-        {
-            rules.Add(new ValidationRule { Rule = "NotEmpty" });
-        }
-
-        // Handle null schema
-        if (schema == null)
-        {
-            return rules;
-        }
-
-        if (schema.MinLength.HasValue)
-        {
-            rules.Add(new ValidationRule 
-            { 
-                Rule = "MinimumLength", 
-                Parameters = new List<string> { schema.MinLength.Value.ToString() }
-            });
-        }
-
-        if (schema.MaxLength.HasValue)
-        {
-            rules.Add(new ValidationRule 
-            { 
-                Rule = "MaximumLength", 
-                Parameters = new List<string> { schema.MaxLength.Value.ToString() }
-            });
-        }
-
-        if (schema.Minimum.HasValue)
-        {
-            rules.Add(new ValidationRule 
-            { 
-                Rule = "GreaterThanOrEqualTo", 
-                Parameters = new List<string> { schema.Minimum.Value.ToString() }
-            });
-        }
-
-        if (schema.Maximum.HasValue)
-        {
-            rules.Add(new ValidationRule 
-            { 
-                Rule = "LessThanOrEqualTo", 
-                Parameters = new List<string> { schema.Maximum.Value.ToString() }
-            });
-        }
-
-        if (!string.IsNullOrEmpty(schema.Pattern))
-        {
-            rules.Add(new ValidationRule 
-            { 
-                Rule = "Matches", 
-                Parameters = new List<string> { $"\"{schema.Pattern}\"" }
-            });
-        }
-
-        // Array validation constraints
-        if (schema.MinItems.HasValue)
-        {
-            rules.Add(new ValidationRule 
-            { 
-                Rule = "Must", 
-                Parameters = new List<string> { $"x => x.Count >= {schema.MinItems.Value}" },
-                Message = $"Must contain at least {schema.MinItems.Value} items"
-            });
-        }
-
-        if (schema.MaxItems.HasValue)
-        {
-            rules.Add(new ValidationRule 
-            { 
-                Rule = "Must", 
-                Parameters = new List<string> { $"x => x.Count <= {schema.MaxItems.Value}" },
-                Message = $"Must contain at most {schema.MaxItems.Value} items"
-            });
-        }
-
-        if (schema.UniqueItems == true)
-        {
-            rules.Add(new ValidationRule 
-            { 
-                Rule = "Must", 
-                Parameters = new List<string> { "x => x.Distinct().Count() == x.Count" },
-                Message = "All items must be unique"
-            });
-        }
-
-        // Number validation constraints
-        if (schema.MultipleOf.HasValue)
-        {
-            rules.Add(new ValidationRule 
-            { 
-                Rule = "Must", 
-                Parameters = new List<string> { $"x => x % {schema.MultipleOf.Value} == 0" },
-                Message = $"Must be a multiple of {schema.MultipleOf.Value}"
-            });
-        }
-
-        // Enum validation
-        if (schema.Enum != null && schema.Enum.Count > 0)
-        {
-            var enumValues = string.Join(", ", schema.Enum.Select(e => $"\"{e}\""));
-            rules.Add(new ValidationRule 
-            { 
-                Rule = "Must", 
-                Parameters = new List<string> { $"x => new[] {{ {enumValues} }}.Contains(x.ToString())" },
-                Message = $"Must be one of: {enumValues}"
-            });
-        }
-
-        return rules;
+        return GenerateValidationRules(schema, isRequired, null, null, null);
     }
 
-    private List<ValidationRule> GenerateValidationRules(Schema schema, bool isRequired, string? enumTypeName, string? constantsClassName)
+    private List<ValidationRule> GenerateValidationRules(Schema schema, bool isRequired, string? enumTypeName, string? constantsClassName, PropertyRule? configRule = null)
     {
         var rules = new List<ValidationRule>();
 
+        // Override schema validation with configuration if provided
+        var effectiveMinLength = configRule?.Validation?.MinLength ?? schema.MinLength;
+        var effectiveMaxLength = configRule?.Validation?.MaxLength ?? schema.MaxLength;
+        var effectiveMinimum = configRule?.Validation?.Minimum ?? schema.Minimum;
+        var effectiveMaximum = configRule?.Validation?.Maximum ?? schema.Maximum;
+        var effectivePattern = configRule?.Validation?.Pattern ?? schema.Pattern;
+        var customMessage = configRule?.Validation?.Message;
+
+        // Required field validation
         if (isRequired)
         {
-            rules.Add(new ValidationRule { Rule = "NotEmpty" });
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "NotEmpty", 
+                Parameters = new List<string>(),
+                Message = customMessage ?? "This field is required"
+            });
         }
 
-        // Handle null schema
-        if (schema == null)
-        {
-            return rules;
-        }
-
-        if (schema.MinLength.HasValue)
+        // String length validation
+        if (effectiveMinLength.HasValue)
         {
             rules.Add(new ValidationRule 
             { 
                 Rule = "MinimumLength", 
-                Parameters = new List<string> { schema.MinLength.Value.ToString() }
+                Parameters = new List<string> { effectiveMinLength.Value.ToString() },
+                Message = customMessage ?? $"Must be at least {effectiveMinLength.Value} characters long"
             });
         }
 
-        if (schema.MaxLength.HasValue)
+        if (effectiveMaxLength.HasValue)
         {
             rules.Add(new ValidationRule 
             { 
                 Rule = "MaximumLength", 
-                Parameters = new List<string> { schema.MaxLength.Value.ToString() }
+                Parameters = new List<string> { effectiveMaxLength.Value.ToString() },
+                Message = customMessage ?? $"Must be no more than {effectiveMaxLength.Value} characters long"
             });
         }
 
-        if (schema.Minimum.HasValue)
-        {
-            rules.Add(new ValidationRule 
-            { 
-                Rule = "GreaterThanOrEqualTo", 
-                Parameters = new List<string> { schema.Minimum.Value.ToString() }
-            });
-        }
-
-        if (schema.Maximum.HasValue)
-        {
-            rules.Add(new ValidationRule 
-            { 
-                Rule = "LessThanOrEqualTo", 
-                Parameters = new List<string> { schema.Maximum.Value.ToString() }
-            });
-        }
-
-        if (!string.IsNullOrEmpty(schema.Pattern))
+        // Pattern validation
+        if (!string.IsNullOrEmpty(effectivePattern))
         {
             rules.Add(new ValidationRule 
             { 
                 Rule = "Matches", 
-                Parameters = new List<string> { $"\"{schema.Pattern}\"" }
+                Parameters = new List<string> { $"\"{effectivePattern}\"" },
+                Message = customMessage ?? $"Must match pattern: {effectivePattern}"
             });
         }
 
-        // Array validation constraints
-        if (schema.MinItems.HasValue)
+        // Numeric range validation
+        if (effectiveMinimum.HasValue)
         {
             rules.Add(new ValidationRule 
             { 
-                Rule = "Must", 
-                Parameters = new List<string> { $"x => x.Count >= {schema.MinItems.Value}" },
-                Message = $"Must contain at least {schema.MinItems.Value} items"
+                Rule = "GreaterThanOrEqualTo", 
+                Parameters = new List<string> { effectiveMinimum.Value.ToString() },
+                Message = customMessage ?? $"Must be greater than or equal to {effectiveMinimum.Value}"
             });
+        }
+
+        if (effectiveMaximum.HasValue)
+        {
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "LessThanOrEqualTo", 
+                Parameters = new List<string> { effectiveMaximum.Value.ToString() },
+                Message = customMessage ?? $"Must be less than or equal to {effectiveMaximum.Value}"
+            });
+        }
+
+        // Array validation - maintain backward compatibility when no configuration provided
+        if (schema.MinItems.HasValue)
+        {
+            if (configRule == null)
+            {
+                // Original format for backward compatibility
+                rules.Add(new ValidationRule 
+                { 
+                    Rule = "Must", 
+                    Parameters = new List<string> { $"x => x.Count >= {schema.MinItems.Value}" },
+                    Message = $"Must contain at least {schema.MinItems.Value} items"
+                });
+            }
+            else
+            {
+                // Enhanced format with null checks when using configuration
+                rules.Add(new ValidationRule 
+                { 
+                    Rule = "Must", 
+                    Parameters = new List<string> { $"x => x == null || x.Count() >= {schema.MinItems.Value}" },
+                    Message = customMessage ?? $"Must contain at least {schema.MinItems.Value} items"
+                });
+            }
         }
 
         if (schema.MaxItems.HasValue)
         {
-            rules.Add(new ValidationRule 
-            { 
-                Rule = "Must", 
-                Parameters = new List<string> { $"x => x.Count <= {schema.MaxItems.Value}" },
-                Message = $"Must contain at most {schema.MaxItems.Value} items"
-            });
+            if (configRule == null)
+            {
+                // Original format for backward compatibility
+                rules.Add(new ValidationRule 
+                { 
+                    Rule = "Must", 
+                    Parameters = new List<string> { $"x => x.Count <= {schema.MaxItems.Value}" },
+                    Message = $"Must contain at most {schema.MaxItems.Value} items"
+                });
+            }
+            else
+            {
+                // Enhanced format with null checks when using configuration
+                rules.Add(new ValidationRule 
+                { 
+                    Rule = "Must", 
+                    Parameters = new List<string> { $"x => x == null || x.Count() <= {schema.MaxItems.Value}" },
+                    Message = customMessage ?? $"Must contain no more than {schema.MaxItems.Value} items"
+                });
+            }
         }
 
         if (schema.UniqueItems == true)
         {
-            rules.Add(new ValidationRule 
-            { 
-                Rule = "Must", 
-                Parameters = new List<string> { "x => x.Distinct().Count() == x.Count" },
-                Message = "All items must be unique"
-            });
+            if (configRule == null)
+            {
+                // Original format for backward compatibility
+                rules.Add(new ValidationRule 
+                { 
+                    Rule = "Must", 
+                    Parameters = new List<string> { "x => x.Distinct().Count() == x.Count" },
+                    Message = "All items must be unique"
+                });
+            }
+            else
+            {
+                // Enhanced format when using configuration
+                rules.Add(new ValidationRule 
+                { 
+                    Rule = "Must", 
+                    Parameters = new List<string> { "x => x.Distinct().Count() == x.Count()" },
+                    Message = customMessage ?? "All items must be unique"
+                });
+            }
         }
 
         // Number validation constraints
@@ -640,7 +689,7 @@ public class CodeGenerator
             { 
                 Rule = "Must", 
                 Parameters = new List<string> { $"x => x % {schema.MultipleOf.Value} == 0" },
-                Message = $"Must be a multiple of {schema.MultipleOf.Value}"
+                Message = customMessage ?? $"Must be a multiple of {schema.MultipleOf.Value}"
             });
         }
 
@@ -649,24 +698,23 @@ public class CodeGenerator
         {
             if (!string.IsNullOrEmpty(enumTypeName))
             {
-                // For enum types, use Enum.IsDefined validation
+                // For integer enums, use Enum.IsDefined
                 rules.Add(new ValidationRule 
-                { 
+                {
                     Rule = "Must", 
                     Parameters = new List<string> { $"x => Enum.IsDefined(typeof({enumTypeName}), x)" },
-                    Message = $"Must be a valid {enumTypeName} value"
+                    Message = customMessage ?? $"Must be a valid {enumTypeName} value"
                 });
             }
             else if (!string.IsNullOrEmpty(constantsClassName))
             {
-                // For string constants, validate against the constants class
-                var constantValues = string.Join(", ", schema.Enum.Select(e => $"{constantsClassName}.{GenerateConstantName(e.ToString() ?? "")}"));
+                // For string enums with constants class, use direct string values for backward compatibility
                 var enumValues = string.Join(", ", schema.Enum.Select(e => $"\"{e}\""));
                 rules.Add(new ValidationRule 
-                { 
+                {
                     Rule = "Must", 
                     Parameters = new List<string> { $"x => new[] {{ {enumValues} }}.Contains(x)" },
-                    Message = $"Must be one of: {enumValues}"
+                    Message = customMessage ?? $"Must be one of: {enumValues}"
                 });
             }
             else
@@ -677,7 +725,7 @@ public class CodeGenerator
                 { 
                     Rule = "Must", 
                     Parameters = new List<string> { $"x => new[] {{ {enumValues} }}.Contains(x.ToString())" },
-                    Message = $"Must be one of: {enumValues}"
+                    Message = customMessage ?? $"Must be one of: {enumValues}"
                 });
             }
         }
