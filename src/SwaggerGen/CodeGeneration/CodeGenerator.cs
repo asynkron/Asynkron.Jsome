@@ -28,6 +28,35 @@ public class CodeGenerator
         
         // Load templates
         var basePath = GetTemplatesPath();
+        var requiredTemplates = new[]
+        {
+            ("DTO.hbs", "DTO template"),
+            ("Validator.hbs", "Validator template"), 
+            ("Enum.hbs", "Enum template"),
+            ("Constants.hbs", "Constants template")
+        };
+
+        var missingTemplates = new List<string>();
+
+        foreach (var (fileName, description) in requiredTemplates)
+        {
+            var templatePath = Path.Combine(basePath, fileName);
+            if (!File.Exists(templatePath))
+            {
+                missingTemplates.Add($"  - {description} ({fileName})");
+            }
+        }
+
+        if (missingTemplates.Any())
+        {
+            throw new FileNotFoundException(
+                $"Required template files not found in directory: {basePath}\n" +
+                $"Missing templates:\n{string.Join("\n", missingTemplates)}\n\n" +
+                "Make sure all required .hbs template files are present in the template directory.\n" +
+                "To specify a custom template directory, use the --template-dir option.");
+        }
+
+        // Load all templates
         _dtoTemplate = File.ReadAllText(Path.Combine(basePath, "DTO.hbs"));
         _validatorTemplate = File.ReadAllText(Path.Combine(basePath, "Validator.hbs"));
         _enumTemplate = File.ReadAllText(Path.Combine(basePath, "Enum.hbs"));
@@ -819,25 +848,57 @@ public class CodeGenerator
 
     private string GetTemplatesPath()
     {
+        // Priority 1: Check user-specified template directory
+        if (!string.IsNullOrWhiteSpace(_options.TemplateDirectory))
+        {
+            if (Directory.Exists(_options.TemplateDirectory))
+            {
+                return _options.TemplateDirectory;
+            }
+            throw new DirectoryNotFoundException($"Custom template directory not found: {_options.TemplateDirectory}");
+        }
+
+        // Priority 2: Check tool installation directory (NuGet contentFiles location)
         var basePath = AppDomain.CurrentDomain.BaseDirectory;
         var templatesPath = Path.Combine(basePath, "Templates");
         
-        // If running from build output, try to find the source templates
-        if (!Directory.Exists(templatesPath))
+        if (Directory.Exists(templatesPath))
         {
-            var currentDir = new DirectoryInfo(Directory.GetCurrentDirectory());
-            while (currentDir != null)
-            {
-                var srcPath = Path.Combine(currentDir.FullName, "src", "SwaggerGen", "Templates");
-                if (Directory.Exists(srcPath))
-                {
-                    templatesPath = srcPath;
-                    break;
-                }
-                currentDir = currentDir.Parent;
-            }
+            return templatesPath;
         }
 
-        return templatesPath;
+        // Priority 3: Check contentFiles location for NuGet package
+        var contentFilesPath = Path.Combine(basePath, "contentFiles", "any", "any", "Templates");
+        if (Directory.Exists(contentFilesPath))
+        {
+            return contentFilesPath;
+        }
+
+        // Priority 4: Development-time fallback - walk up directory tree to find source templates
+        var currentDir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (currentDir != null)
+        {
+            var srcPath = Path.Combine(currentDir.FullName, "src", "SwaggerGen", "Templates");
+            if (Directory.Exists(srcPath))
+            {
+                return srcPath;
+            }
+            currentDir = currentDir.Parent;
+        }
+
+        // Priority 5: Last resort - check if templates are in the current directory
+        if (Directory.Exists("Templates"))
+        {
+            return Path.GetFullPath("Templates");
+        }
+
+        throw new DirectoryNotFoundException(
+            "Template files not found. Checked locations:\n" +
+            $"  - Custom directory: {_options.TemplateDirectory ?? "(not specified)"}\n" +
+            $"  - Tool directory: {templatesPath}\n" +
+            $"  - ContentFiles directory: {contentFilesPath}\n" +
+            $"  - Source directory search from: {Directory.GetCurrentDirectory()}\n" +
+            $"  - Current directory: Templates\n\n" +
+            "To specify a custom template directory, use the --template-dir option or set the TemplateDirectory property in CodeGenerationOptions.");
     }
 }
