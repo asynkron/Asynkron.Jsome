@@ -106,4 +106,18 @@ public class GlobalSettings
     [JsonProperty("maxDepth")]
     [YamlMember(Alias = "maxDepth")]
     public int MaxDepth { get; set; } = 10;
+
+    /// <summary>
+    /// Prefix to apply to all generated type names (DTOs, enums, constants)
+    /// </summary>
+    [JsonProperty("type_name_prefix")]
+    [YamlMember(Alias = "type_name_prefix")]
+    public string? TypeNamePrefix { get; set; }
+
+    /// <summary>
+    /// Suffix to apply to all generated type names (DTOs, enums, constants)
+    /// </summary>
+    [JsonProperty("type_name_suffix")]
+    [YamlMember(Alias = "type_name_suffix")]
+    public string? TypeNameSuffix { get; set; }
 }
