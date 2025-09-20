@@ -96,6 +96,8 @@ global:
   defaultInclude: true
   includeDescriptions: true
   maxDepth: 8
+  typeNamePrefix: "Api"      # Optional: Prefix for all type names
+  typeNameSuffix: "DTO"      # Optional: Suffix for all type names
 
 # Property-specific rules
 rules:
@@ -142,7 +144,9 @@ rules:
     "generateEnumTypes": true,
     "defaultInclude": true,
     "includeDescriptions": true,
-    "maxDepth": 8
+    "maxDepth": 8,
+    "typeNamePrefix": "Api",
+    "typeNameSuffix": "DTO"
   },
   "rules": {
     "User.Password": {
@@ -215,6 +219,26 @@ Property paths use dot notation to specify the exact location in the object hier
 - `defaultInclude`: Default inclusion policy (default: true)
 - `includeDescriptions`: Whether to include original descriptions
 - `maxDepth`: Maximum depth for object graph traversal
+- `typeNamePrefix`: Prefix to apply to all generated type names (DTOs, enums, constants)
+- `typeNameSuffix`: Suffix to apply to all generated type names (DTOs, enums, constants)
+
+#### Type Name Formatting
+
+When `typeNamePrefix` and/or `typeNameSuffix` are specified, they are applied to all generated type names:
+
+```yaml
+global:
+  typeNamePrefix: "Api"
+  typeNameSuffix: "DTO"
+```
+
+This transforms type names as follows:
+- `User` class becomes `ApiUserDTO`
+- `OrderStatus` enum becomes `ApiOrderStatusDTO`
+- `ProductCategoryConstants` class becomes `ApiProductCategoryConstantsDTO`
+- All type references in generated code are automatically updated
+
+**Note**: Property names are never affected by prefix/suffix - only type names change.
 
 #### Property Rules
 

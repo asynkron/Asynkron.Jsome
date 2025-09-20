@@ -191,7 +191,7 @@ public class CodeGenerator
         if (propertyType == "integer")
         {
             // Generate enum for integer enums
-            var enumName = $"{ToPascalCase(schemaName)}{ToPascalCase(propertyName)}";
+            var enumName = ApplyTypeNameFormatting($"{ToPascalCase(schemaName)}{ToPascalCase(propertyName)}");
             if (!enumInfos.ContainsKey(enumName))
             {
                 var enumInfo = new EnumInfo
@@ -212,7 +212,7 @@ public class CodeGenerator
         else if (propertyType == "string")
         {
             // Generate constants class for string enums
-            var className = $"{ToPascalCase(schemaName)}{ToPascalCase(propertyName)}Constants";
+            var className = ApplyTypeNameFormatting($"{ToPascalCase(schemaName)}{ToPascalCase(propertyName)}Constants");
             if (!constantsInfos.ContainsKey(className))
             {
                 var constantsInfo = new ConstantsInfo
@@ -281,7 +281,7 @@ public class CodeGenerator
             
         var classInfo = new ClassInfo
         {
-            ClassName = ToPascalCase(name),
+            ClassName = ApplyTypeNameFormatting(ToPascalCase(name)),
             Namespace = targetNamespace,
             Description = schema.Description ?? ""
         };
@@ -491,7 +491,7 @@ public class CodeGenerator
             if (propertyType == "integer")
             {
                 // Use generated enum type
-                var enumName = $"{ToPascalCase(parentSchemaName)}{ToPascalCase(name)}";
+                var enumName = ApplyTypeNameFormatting($"{ToPascalCase(parentSchemaName)}{ToPascalCase(name)}");
                 if (enumInfos.ContainsKey(enumName))
                 {
                     propertyInfo.Type = enumName;
@@ -502,7 +502,7 @@ public class CodeGenerator
             else if (propertyType == "string")
             {
                 // Property stays as string, but we reference the constants class
-                var constantsClassName = $"{ToPascalCase(parentSchemaName)}{ToPascalCase(name)}Constants";
+                var constantsClassName = ApplyTypeNameFormatting($"{ToPascalCase(parentSchemaName)}{ToPascalCase(name)}Constants");
                 if (constantsInfos.ContainsKey(constantsClassName))
                 {
                     propertyInfo.ConstantsClassName = constantsClassName;
@@ -745,7 +745,7 @@ public class CodeGenerator
         if (!string.IsNullOrEmpty(schema.Ref))
         {
             var refName = schema.Ref.Replace("#/definitions/", "");
-            return refName;
+            return ApplyTypeNameFormatting(refName);
         }
 
         // Handle cases where Type might be null or empty
@@ -802,6 +802,19 @@ public class CodeGenerator
             "bool" => value.ToString()?.ToLower() ?? "false",
             _ => value.ToString() ?? ""
         };
+    }
+
+    /// <summary>
+    /// Applies global type name prefix and suffix formatting to a type name
+    /// </summary>
+    /// <param name="typeName">The base type name</param>
+    /// <returns>The formatted type name with prefix/suffix applied</returns>
+    private string ApplyTypeNameFormatting(string typeName)
+    {
+        var prefix = _modifierConfig?.Global?.TypeNamePrefix ?? "";
+        var suffix = _modifierConfig?.Global?.TypeNameSuffix ?? "";
+        
+        return $"{prefix}{typeName}{suffix}";
     }
 
     private string GetTemplatesPath()
