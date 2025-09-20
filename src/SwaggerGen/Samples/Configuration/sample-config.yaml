@@ -1,0 +1,74 @@
+# SwaggerGen Modifier Configuration Sample (YAML)
+# This file demonstrates how to control object graph generation
+
+global:
+  namespace: "MyApi.Generated"
+  generateEnumTypes: true
+  defaultInclude: true
+  includeDescriptions: true
+  maxDepth: 8
+
+rules:
+  # Include specific properties with custom configuration
+  "Order.OrderDetail.Product.Name":
+    include: true
+    description: "Product name with custom validation"
+    validation:
+      required: true
+      maxLength: 100
+      pattern: "^[A-Za-z0-9\\s]+$"
+      message: "Product name must contain only alphanumeric characters and spaces"
+
+  # Exclude sensitive properties
+  "User.Password":
+    include: false
+
+  "Customer.CreditCard.Number":
+    include: false
+
+  # Custom type mapping
+  "Order.CreatedDate":
+    include: true
+    type: "DateTime"
+    format: "yyyy-MM-dd'T'HH:mm:ss.fff'Z'"
+    description: "Order creation timestamp"
+
+  # Override validation rules
+  "Product.Price":
+    include: true
+    validation:
+      required: true
+      minimum: 0.01
+      maximum: 99999.99
+      message: "Price must be between $0.01 and $99,999.99"
+
+  # Complex nested property with custom settings
+  "Order.ShippingAddress.PostalCode":
+    include: true
+    validation:
+      required: true
+      pattern: "^\\d{5}(-\\d{4})?$"
+      message: "Postal code must be in format 12345 or 12345-6789"
+
+  # Include an entire object but exclude specific children
+  "Customer.Profile":
+    include: true
+    description: "Customer profile information"
+
+  "Customer.Profile.InternalNotes":
+    include: false
+
+  # Custom default values
+  "Order.Status":
+    include: true
+    default: "Pending"
+    validation:
+      required: true
+
+  # Format specification for IDs
+  "*.Id":
+    include: true
+    type: "string"
+    validation:
+      required: true
+      pattern: "^[a-zA-Z0-9_-]+$"
