@@ -1,3 +1,5 @@
+using SwaggerGen.Configuration;
+
 namespace SwaggerGen.CodeGeneration;
 
 /// <summary>
@@ -11,4 +13,16 @@ public class CodeGenerationOptions
     /// Default: false (for backward compatibility)
     /// </summary>
     public bool GenerateEnumTypes { get; set; } = false;
+
+    /// <summary>
+    /// Path to a modifier configuration file (YAML or JSON) that controls object graph generation.
+    /// If null or empty, no modifier configuration is applied.
+    /// </summary>
+    public string? ModifierConfigurationPath { get; set; }
+
+    /// <summary>
+    /// Modifier configuration instance. If both this and ModifierConfigurationPath are provided,
+    /// this instance takes precedence.
+    /// </summary>
+    public ModifierConfiguration? ModifierConfiguration { get; set; }
 }

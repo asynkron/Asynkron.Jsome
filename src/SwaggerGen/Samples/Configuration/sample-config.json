@@ -1,0 +1,64 @@
+{
+  "global": {
+    "namespace": "MyApi.Generated",
+    "generateEnumTypes": true,
+    "defaultInclude": true,
+    "includeDescriptions": true,
+    "maxDepth": 8
+  },
+  "rules": {
+    "Order.OrderDetail.Product.Name": {
+      "include": true,
+      "description": "Product name with custom validation",
+      "validation": {
+        "required": true,
+        "maxLength": 100,
+        "pattern": "^[A-Za-z0-9\\s]+$",
+        "message": "Product name must contain only alphanumeric characters and spaces"
+      }
+    },
+    "User.Password": {
+      "include": false
+    },
+    "Customer.CreditCard.Number": {
+      "include": false
+    },
+    "Order.CreatedDate": {
+      "include": true,
+      "type": "DateTime",
+      "format": "yyyy-MM-dd'T'HH:mm:ss.fff'Z'",
+      "description": "Order creation timestamp"
+    },
+    "Product.Price": {
+      "include": true,
+      "validation": {
+        "required": true,
+        "minimum": 0.01,
+        "maximum": 99999.99,
+        "message": "Price must be between $0.01 and $99,999.99"
+      }
+    },
+    "Order.ShippingAddress.PostalCode": {
+      "include": true,
+      "validation": {
+        "required": true,
+        "pattern": "^\\d{5}(-\\d{4})?$",
+        "message": "Postal code must be in format 12345 or 12345-6789"
+      }
+    },
+    "Customer.Profile": {
+      "include": true,
+      "description": "Customer profile information"
+    },
+    "Customer.Profile.InternalNotes": {
+      "include": false
+    },
+    "Order.Status": {
+      "include": true,
+      "default": "Pending",
+      "validation": {
+        "required": true
+      }
+    }
+  }
+}
