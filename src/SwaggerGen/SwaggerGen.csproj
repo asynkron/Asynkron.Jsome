@@ -5,6 +5,21 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    
+    <!-- Global Tool Configuration -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>swaggergen</ToolCommandName>
+    <PackageId>dotnet-swaggergen</PackageId>
+    
+    <!-- Package Metadata -->
+    <Description>A C# code generator that processes Swagger 2.0 JSON files to produce C# DTO classes and FluentValidation validators</Description>
+    <PackageTags>swagger;openapi;codegen;dto;fluentvalidation;dotnet-tool</PackageTags>
+    <PackageProjectUrl>https://github.com/asynkron/SwaggerGen</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/asynkron/SwaggerGen</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Authors>asynkron</Authors>
+    <Company>asynkron</Company>
   </PropertyGroup>
 
   <ItemGroup>

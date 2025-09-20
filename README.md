@@ -18,7 +18,64 @@ A C# code generator that processes Swagger 2.0 JSON files to produce C# DTO (Dat
 - ⭐ **Type Mapping**: Map Swagger types to custom C# types
 - ⭐ **Backward Compatible**: Works seamlessly with existing code without configuration
 
-## Getting Started
+## Installation
+
+SwaggerGen is available as a .NET global tool. Install it using the following command:
+
+```bash
+# Install the global tool
+dotnet tool install -g dotnet-swaggergen
+
+# Update to the latest version
+dotnet tool update -g dotnet-swaggergen
+
+# Uninstall if needed
+dotnet tool uninstall -g dotnet-swaggergen
+```
+
+### Prerequisites
+
+- .NET 8.0 Runtime or SDK
+
+## Usage
+
+After installation, use the `swaggergen` command from anywhere in your terminal:
+
+#### Default Usage (Petstore Sample)
+
+```bash
+swaggergen
+```
+
+#### With Custom Swagger File
+
+```bash
+# Use a relative path
+swaggergen my-api-spec.json
+
+# Use an absolute path  
+swaggergen /path/to/swagger.json
+
+# Use a remote URL
+swaggergen https://petstore.swagger.io/v2/swagger.json
+```
+
+#### Command Line Options
+
+```
+Usage: swaggergen [swagger-file-path]
+  swagger-file-path: Path to a Swagger 2.0 JSON file (optional)
+
+Examples:
+  swaggergen
+  swaggergen petstore-swagger.json
+  swaggergen /path/to/my-api.json
+  swaggergen https://api.example.com/swagger.json
+```
+
+## Development
+
+If you want to contribute to SwaggerGen or run it from source:
 
 ### Prerequisites
 
@@ -36,40 +93,9 @@ dotnet build
 
 # Run tests
 dotnet test
-```
 
-### Running
-
-#### Default Usage (Petstore Sample)
-
-```bash
+# Run from source
 dotnet run --project src/SwaggerGen
-```
-
-#### With Custom Swagger File
-
-```bash
-# Use a relative path
-dotnet run --project src/SwaggerGen my-api-spec.json
-
-# Use an absolute path  
-dotnet run --project src/SwaggerGen /path/to/swagger.json
-
-# Use the included Stripe example
-dotnet run --project src/SwaggerGen testdata/stripe-swagger.json
-```
-
-#### Command Line Options
-
-```
-Usage: SwaggerGen [swagger-file-path]
-  swagger-file-path: Path to a Swagger 2.0 JSON file (optional)
-
-Examples:
-  SwaggerGen
-  SwaggerGen petstore-swagger.json
-  SwaggerGen /path/to/my-api.json
-  SwaggerGen testdata/stripe-swagger.json
 ```
 
 ## Modifier Configuration
@@ -386,6 +412,38 @@ The tests include:
 3. Add tests for your changes
 4. Ensure all tests pass
 5. Submit a pull request
+
+## For Maintainers
+
+### Publishing a New Release
+
+This project uses automated NuGet publishing via GitHub Actions. To publish a new version:
+
+1. **Set up the NuGet API Key** (one-time setup):
+   - Go to [NuGet.org](https://www.nuget.org/account/apikeys) and create an API key
+   - In GitHub, go to repository Settings > Secrets and variables > Actions
+   - Add a new secret named `NUGET_API_KEY` with your NuGet API key
+
+2. **Create and push a release tag**:
+   ```bash
+   # Tag the current commit with version number
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+3. **Monitor the release**:
+   - The GitHub Actions workflow will automatically:
+     - Build and test the project
+     - Create a NuGet package with the version from the tag
+     - Publish to NuGet.org
+   - Check the Actions tab to monitor progress
+   - The package will be available at: https://www.nuget.org/packages/dotnet-swaggergen/
+
+### Versioning
+
+- Use semantic versioning (e.g., v1.0.0, v1.1.0, v2.0.0)
+- The workflow extracts the version from the git tag (removes the 'v' prefix)
+- Pre-release versions can use suffixes (e.g., v1.0.0-beta.1)
 
 ## License
 
