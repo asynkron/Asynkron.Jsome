@@ -445,6 +445,29 @@ This project uses automated NuGet publishing via GitHub Actions. To publish a ne
 - The workflow extracts the version from the git tag (removes the 'v' prefix)
 - Pre-release versions can use suffixes (e.g., v1.0.0-beta.1)
 
+### Validation
+
+Before creating a release, you can validate the NuGet publishing setup:
+
+```bash
+# Run the validation script
+./validate-nuget-setup.sh
+```
+
+This script checks:
+- Build and test success
+- NuGet package creation
+- Package contents and structure
+- GitHub Actions workflow configuration
+
+### Troubleshooting
+
+If the publishing fails:
+1. Check the GitHub Actions logs in the "Actions" tab
+2. Verify the `NUGET_API_KEY` secret is correctly set
+3. Ensure the tag follows semantic versioning (vX.Y.Z)
+4. Run the validation script locally to test package creation
+
 ## License
 
 This project is licensed under the MIT License.
