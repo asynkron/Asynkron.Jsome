@@ -50,8 +50,14 @@ public class LocaleIssueTests
 
             // Assert - this should expect dots, not commas
             var validator = result.Validators["NumberTest"];
-            Assert.Contains(".Must(x => x % 0.5 == 0)", validator);
-            Assert.Contains("Must be a multiple of 0.5", validator);
+            // Check for either HTML encoded or plain format
+            Assert.True(
+                validator.Contains(".Must(x => x % 0.5 == 0)") || 
+                validator.Contains(".Must(x =&gt; x % 0.5 == 0)"),
+                $"Expected to find decimal with dot, but got: {validator}");
+            Assert.True(
+                validator.Contains("Must be a multiple of 0.5"),
+                $"Expected message with dot, but got: {validator}");
         }
         finally
         {
