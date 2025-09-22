@@ -6,8 +6,7 @@ namespace {{Namespace}};
 /// <summary>
 /// {{Description}}
 /// </summary>
-public class {{ClassName}}
-{
+public record {{ClassName}}(
 {{#each Properties}}
     /// <summary>
 {{#if Description}}    /// {{Description}}
@@ -29,7 +28,6 @@ public class {{ClassName}}
     {{#if MinLength}}
     [MinLength({{MinLength}})]
     {{/if}}
-    public {{#if UseRequiredKeyword}}required {{/if}}{{{Type}}} {{Name}} { get; set; }{{#if DefaultValue}} = {{DefaultValue}};{{/if}}
-
+    {{#if UseRequiredKeyword}}required {{/if}}{{{Type}}} {{Name}}{{#if DefaultValue}} = {{DefaultValue}}{{/if}}{{#unless @last}},{{/unless}}
 {{/each}}
-}
+);

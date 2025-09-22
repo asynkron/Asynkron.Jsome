@@ -28,6 +28,10 @@ public class PropertyInfo
     public string? EnumTypeName { get; set; }
     public string? ConstantsClassName { get; set; }
     public bool IsEnum => EnumValues.Count > 0;
+    
+    // Modern C# features
+    public bool IsNullable { get; set; }
+    public bool UseRequiredKeyword { get; set; }
 }
 
 /// <summary>

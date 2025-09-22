@@ -17,6 +17,9 @@ A C# code generator that processes Swagger 2.0 JSON files to produce C# DTO (Dat
 - ⭐ **Custom Validation Override**: Override validation rules, messages, and constraints
 - ⭐ **Type Mapping**: Map Swagger types to custom C# types
 - ⭐ **Backward Compatible**: Works seamlessly with existing code without configuration
+- 🆕 **Modern C# Features**: Support for nullable reference types (`string?`) and `required` keyword
+- 🆕 **C# Records Support**: Generate immutable records instead of mutable classes
+- 🆕 **Multiple DTO Styles**: Choose between traditional classes, modern classes, and records
 
 ## Installation
 
@@ -293,6 +296,84 @@ The modifier configuration system is fully backward compatible:
 - **No configuration**: Behaves exactly like the original system
 - **Partial configuration**: Only specified rules are applied, others use defaults
 - **Legacy code**: Continues to work without any changes
+
+## Modern C# Features
+
+SwaggerGen supports modern C# language features that enable cleaner, more expressive code generation:
+
+### Nullable Reference Types & Required Keyword
+
+Use the `--modern` flag to enable nullable reference types and the `required` keyword:
+
+```bash
+swaggergen generate my-api.json --output ./Generated --modern
+```
+
+**Traditional approach (default):**
+```csharp
+public class User
+{
+    [Required]
+    public string Name { get; set; }
+    
+    public string Email { get; set; }  // May be null but not explicitly marked
+}
+```
+
+**Modern approach (`--modern`):**
+```csharp
+public class User
+{
+    public required string Name { get; set; }  // Uses 'required' keyword
+    
+    public string? Email { get; set; }         // Explicitly nullable
+}
+```
+
+### C# Records
+
+Generate immutable records using the `--records` flag:
+
+```bash
+swaggergen generate my-api.json --output ./Generated --modern --records
+```
+
+**Generated C# record:**
+```csharp
+public record User(
+    [JsonProperty("id")] required int Id,
+    [JsonProperty("name")] required string Name,
+    [JsonProperty("email")] string? Email,
+    [JsonProperty("age")] int? Age
+);
+```
+
+### Feature Comparison
+
+| Feature | Legacy | Modern Class | Modern Record |
+|---------|--------|--------------|---------------|
+| **Mutability** | Mutable | Mutable | Immutable |
+| **Required Fields** | `[Required]` attribute | `required` keyword | `required` keyword |
+| **Optional Fields** | Non-nullable | Nullable (`?`) | Nullable (`?`) |
+| **Syntax** | Properties | Properties | Positional parameters |
+| **Performance** | Standard | Standard | Optimized |
+| **Equality** | Reference | Reference | Structural |
+
+### CLI Options Summary
+
+```bash
+# Generate traditional classes (default)
+swaggergen generate api.json --output ./Generated
+
+# Generate modern classes with nullable types and required keyword
+swaggergen generate api.json --output ./Generated --modern
+
+# Generate modern records
+swaggergen generate api.json --output ./Generated --modern --records
+
+# View all available options
+swaggergen generate --help
+```
 
 ## Output
 
