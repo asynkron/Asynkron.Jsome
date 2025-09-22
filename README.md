@@ -22,6 +22,7 @@ A C# code generator that processes Swagger 2.0 JSON files and JSON Schema direct
 - 🆕 **C# Records Support**: Generate immutable records instead of mutable classes
 - 🆕 **Multiple DTO Styles**: Choose between traditional classes, modern classes, and records
 - 🆕 **Vanilla JSON Schema Compatibility**: Support boolean `additionalProperties` and JSON Schema Draft 4+ features
+- 🆕 **Swashbuckle Attributes**: Generate `SwaggerSchema` and `SwaggerExampleValue` attributes for rich OpenAPI documentation
 
 ## Installation
 
@@ -97,6 +98,8 @@ Options:
   -t, --template-dir <template-dir>     Custom directory containing Handlebars template files
   -m, --modern                         Enable modern C# features (nullable types, required keyword)
   --records                            Generate C# records instead of classes for DTOs
+  --system-text-json                   Use System.Text.Json attributes instead of Newtonsoft.Json
+  --swashbuckle-attributes             Generate Swashbuckle.AspNetCore.Annotations attributes
   -h, --help                           Show help information
 
 Examples:
@@ -105,6 +108,7 @@ Examples:
   swaggergen generate /path/to/my-api.json
   swaggergen generate --schema-dir ./json-schemas --namespace MyApi.Generated
   swaggergen generate --config config.yaml --output ./generated --modern
+  swaggergen generate petstore-swagger.json --swashbuckle-attributes --output ./generated
 ```
 
 ### JSON Schema Directory Features
@@ -426,6 +430,94 @@ swaggergen generate api.json --output ./Generated --modern --records
 # View all available options
 swaggergen generate --help
 ```
+
+## Swashbuckle Attributes Support
+
+SwaggerGen can generate **Swashbuckle.AspNetCore.Annotations** attributes alongside standard DataAnnotations to provide rich OpenAPI documentation in your ASP.NET Core applications.
+
+### Usage
+
+Enable Swashbuckle attributes generation with the `--swashbuckle-attributes` flag:
+
+```bash
+swaggergen generate petstore-swagger.json --swashbuckle-attributes
+```
+
+### Generated Attributes
+
+When enabled, SwaggerGen maps OpenAPI metadata to Swashbuckle attributes:
+
+| OpenAPI Property | Swashbuckle Attribute | Description |
+|------------------|----------------------|-------------|
+| `description` | `[SwaggerSchema(Description = "...")]` | Property description for documentation |
+| `format` | `[SwaggerSchema(Format = "...")]` | Data format (e.g., "email", "uuid", "int64") |
+| `example` | `[SwaggerExampleValue(...)]` | Example value for documentation |
+
+### Example Output
+
+**Input Swagger Schema:**
+```json
+{
+  "User": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "format": "int64",
+        "description": "The unique identifier",
+        "example": 12345
+      },
+      "email": {
+        "type": "string", 
+        "format": "email",
+        "description": "User's email address",
+        "example": "john.doe@example.com"
+      }
+    },
+    "required": ["id"]
+  }
+}
+```
+
+**Generated C# Code:**
+```csharp
+using System.ComponentModel.DataAnnotations;
+using Newtonsoft.Json;
+using Swashbuckle.AspNetCore.Annotations;
+
+namespace Generated;
+
+public partial class User
+{
+    [JsonProperty("id")]
+    [Required]
+    [SwaggerSchema(Description = "The unique identifier", Format = "int64")]
+    [SwaggerExampleValue(12345)]
+    public long Id { get; set; }
+
+    [JsonProperty("email")]
+    [SwaggerSchema(Description = "User's email address", Format = "email")]
+    [SwaggerExampleValue("john.doe@example.com")]
+    public string Email { get; set; }
+}
+```
+
+### Feature Compatibility
+
+Swashbuckle attributes work alongside all other SwaggerGen features:
+
+```bash
+# Combine with modern C# features
+swaggergen generate api.json --swashbuckle-attributes --modern
+
+# Combine with System.Text.Json
+swaggergen generate api.json --swashbuckle-attributes --system-text-json
+
+# Combine with records
+swaggergen generate api.json --swashbuckle-attributes --modern --records
+```
+
+**Note:** Swashbuckle attributes are generated *in addition to* existing DataAnnotations, ensuring backward compatibility.
 
 ## Output
 
