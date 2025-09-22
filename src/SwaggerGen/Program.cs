@@ -3,6 +3,7 @@ using SwaggerGen.Models;
 using SwaggerGen.CodeGeneration;
 using SwaggerGen.Configuration;
 using System.CommandLine;
+using System.Globalization;
 using Spectre.Console;
 
 namespace SwaggerGen;
@@ -221,7 +222,7 @@ class Program
             if (!string.IsNullOrEmpty(config.Global.Namespace))
                 table.AddRow("  Namespace", config.Global.Namespace);
             if (config.Global.GenerateEnumTypes.HasValue)
-                table.AddRow("  Generate Enum Types", config.Global.GenerateEnumTypes.Value.ToString());
+                table.AddRow("  Generate Enum Types", Convert.ToString(config.Global.GenerateEnumTypes.Value, CultureInfo.InvariantCulture));
             if (!string.IsNullOrEmpty(config.Global.TypeNamePrefix))
                 table.AddRow("  Type Name Prefix", config.Global.TypeNamePrefix);
             if (!string.IsNullOrEmpty(config.Global.TypeNameSuffix))
@@ -274,8 +275,8 @@ class Program
             table.AddRow("Host", document.Host);
         if (!string.IsNullOrEmpty(document.BasePath))
             table.AddRow("Base Path", document.BasePath);
-        table.AddRow("Paths", document.Paths.Count.ToString());
-        table.AddRow("Definitions", document.Definitions.Count.ToString());
+        table.AddRow("Paths", Convert.ToString(document.Paths.Count, CultureInfo.InvariantCulture));
+        table.AddRow("Definitions", Convert.ToString(document.Definitions.Count, CultureInfo.InvariantCulture));
 
         var panel = new Panel(table)
         {

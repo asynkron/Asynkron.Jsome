@@ -223,9 +223,9 @@ public class CodeGenerator
                     Description = $"Constants for {schemaName}.{propertyName}",
                     Constants = propertySchema.Enum.Select(value => new ConstantInfo
                     {
-                        Name = GenerateConstantName(value.ToString() ?? ""),
+                        Name = GenerateConstantName(Convert.ToString( value, CultureInfo.InvariantCulture) ?? ""),
                         Value =   Convert.ToString(value, CultureInfo.InvariantCulture) ?? "",
-                        Description = $"Value: {value}"
+                        Description = $"Value: {Convert.ToString(value, CultureInfo.InvariantCulture) ?? ""}"
                     }).ToList()
                 };
                 constantsInfos.Add(className, constantsInfo);
@@ -235,7 +235,7 @@ public class CodeGenerator
 
     private string GenerateEnumValueName(object value)
     {
-        var stringValue = value.ToString() ?? "";
+        var stringValue = Convert.ToString(value, CultureInfo.InvariantCulture);
         
         // Convert to PascalCase and ensure it's a valid C# identifier
         var name = ToPascalCase(stringValue);
@@ -566,8 +566,8 @@ public class CodeGenerator
             rules.Add(new ValidationRule 
             { 
                 Rule = "MinimumLength", 
-                Parameters = [effectiveMinLength.Value.ToString()],
-                Message = customMessage ?? $"Must be at least {effectiveMinLength.Value} characters long"
+                Parameters = [Convert.ToString( effectiveMinLength.Value, CultureInfo.InvariantCulture)],
+                Message = customMessage ?? $"Must be at least {Convert.ToString(effectiveMinLength.Value, CultureInfo.InvariantCulture)  } characters long"
             });
         }
 
@@ -576,8 +576,8 @@ public class CodeGenerator
             rules.Add(new ValidationRule 
             { 
                 Rule = "MaximumLength", 
-                Parameters = [effectiveMaxLength.Value.ToString()],
-                Message = customMessage ?? $"Must be no more than {effectiveMaxLength.Value} characters long"
+                Parameters = [Convert.ToString(effectiveMaxLength.Value, CultureInfo.InvariantCulture)],
+                Message = customMessage ?? $"Must be no more than {Convert.ToString(effectiveMaxLength.Value, CultureInfo.InvariantCulture) } characters long"
             });
         }
 
@@ -598,8 +598,8 @@ public class CodeGenerator
             rules.Add(new ValidationRule 
             { 
                 Rule = "GreaterThanOrEqualTo", 
-                Parameters = [effectiveMinimum.Value.ToString()],
-                Message = customMessage ?? $"Must be greater than or equal to {effectiveMinimum.Value}"
+                Parameters = [effectiveMinimum.Value.ToString(CultureInfo.InvariantCulture)],
+                Message = customMessage ?? $"Must be greater than or equal to {effectiveMinimum.Value.ToString(CultureInfo.InvariantCulture)}"
             });
         }
 
@@ -608,8 +608,8 @@ public class CodeGenerator
             rules.Add(new ValidationRule 
             { 
                 Rule = "LessThanOrEqualTo", 
-                Parameters = [effectiveMaximum.Value.ToString()],
-                Message = customMessage ?? $"Must be less than or equal to {effectiveMaximum.Value}"
+                Parameters = [effectiveMaximum.Value.ToString(CultureInfo.InvariantCulture)],
+                Message = customMessage ?? $"Must be less than or equal to {effectiveMaximum.Value.ToString(CultureInfo.InvariantCulture)}"
             });
         }
 
@@ -795,16 +795,17 @@ public class CodeGenerator
             }
         }
 
-        return result.ToString();
+        return Convert.ToString(result, CultureInfo.InvariantCulture) ?? "";
     }
 
     private string FormatDefaultValue(object value, string type)
     {
+        var valueStr = Convert.ToString(value, CultureInfo.InvariantCulture) ?? "";
         return type.ToLower() switch
         {
-            "string" => $"\"{value}\"",
-            "bool" => value.ToString()?.ToLower() ?? "false",
-            _ => value.ToString() ?? ""
+            "string" => $"\"{valueStr}\"",
+            "bool" => valueStr.ToLower(),
+            _ => valueStr
         };
     }
 
