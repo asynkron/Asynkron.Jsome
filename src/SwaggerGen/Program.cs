@@ -66,6 +66,14 @@ class Program
         var templateDirOption = new Option<DirectoryInfo?>(
             aliases: new[] { "--template-dir", "-t" },
             description: "Custom directory containing Handlebars template files (DTO.hbs, Validator.hbs, etc.)");
+
+        var modernFeaturesOption = new Option<bool>(
+            aliases: new[] { "--modern", "-m" },
+            description: "Enable modern C# features: nullable reference types and required keyword");
+
+        var generateRecordsOption = new Option<bool>(
+            aliases: new[] { "--records" },
+            description: "Generate C# records instead of classes for DTOs");
             
         var generateCommand = new Command("generate", "Generate C# code from a Swagger specification")
         {
@@ -74,13 +82,15 @@ class Program
             namespaceOption,
             outputOption,
             yesOption,
-            templateDirOption
+            templateDirOption,
+            modernFeaturesOption,
+            generateRecordsOption
         };
 
-        generateCommand.SetHandler(async (swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir) =>
+        generateCommand.SetHandler(async (swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir, useModern, generateRecords) =>
         {
-            await HandleGenerateCommand(swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir);
-        }, swaggerFileArgument, configOption, namespaceOption, outputOption, yesOption, templateDirOption);
+            await HandleGenerateCommand(swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir, useModern, generateRecords);
+        }, swaggerFileArgument, configOption, namespaceOption, outputOption, yesOption, templateDirOption, modernFeaturesOption, generateRecordsOption);
 
         return generateCommand;
     }
@@ -97,7 +107,7 @@ class Program
         return helpCommand;
     }
 
-    private static async Task HandleGenerateCommand(FileInfo? swaggerFile, FileInfo? configFile, string? namespaceOverride, DirectoryInfo? outputDir, bool skipConfirmation, DirectoryInfo? templateDir)
+    private static async Task HandleGenerateCommand(FileInfo? swaggerFile, FileInfo? configFile, string? namespaceOverride, DirectoryInfo? outputDir, bool skipConfirmation, DirectoryInfo? templateDir, bool useModern, bool generateRecords)
     {
         try
         {
@@ -121,7 +131,7 @@ class Program
             }
 
             // Generate code
-            await GenerateCode(document, config, namespaceOverride, outputDir, templateDir);
+            await GenerateCode(document, config, namespaceOverride, outputDir, templateDir, useModern, generateRecords);
 
             AnsiConsole.MarkupLine("[green]✓ Code generation completed successfully![/]");
         }
@@ -324,12 +334,18 @@ class Program
         AnsiConsole.WriteLine();
     }
 
-    private static async Task GenerateCode(SwaggerDocument document, ModifierConfiguration? config, string? namespaceOverride, DirectoryInfo? outputDir, DirectoryInfo? templateDir)
+    private static async Task GenerateCode(SwaggerDocument document, ModifierConfiguration? config, string? namespaceOverride, DirectoryInfo? outputDir, DirectoryInfo? templateDir, bool useModern, bool generateRecords)
     {
         AnsiConsole.MarkupLine("[green]⚙️  Generating C# code...[/]");
         
         // Create generation options
-        var options = new CodeGenerationOptions();
+        var options = new CodeGenerationOptions
+        {
+            UseNullableReferenceTypes = useModern,
+            UseRequiredKeyword = useModern,
+            GenerateRecords = generateRecords
+        };
+        
         if (config != null)
         {
             options.ModifierConfiguration = config;

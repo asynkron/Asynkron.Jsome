@@ -31,4 +31,24 @@ public class CodeGenerationOptions
     /// If null or empty, the default template discovery logic is used.
     /// </summary>
     public string? TemplateDirectory { get; set; }
+
+    /// <summary>
+    /// When true, generates nullable reference types (e.g., string?) for non-required properties.
+    /// When false, uses the legacy behavior of non-nullable types.
+    /// Default: false (for backward compatibility)
+    /// </summary>
+    public bool UseNullableReferenceTypes { get; set; } = false;
+
+    /// <summary>
+    /// When true, uses the C# 'required' keyword instead of [Required] attributes for required properties.
+    /// Requires C# 11+ and nullable reference types to be enabled.
+    /// Default: false (for backward compatibility)
+    /// </summary>
+    public bool UseRequiredKeyword { get; set; } = false;
+
+    /// <summary>
+    /// When true, generates C# records instead of classes for DTOs.
+    /// Default: false (for backward compatibility)
+    /// </summary>
+    public bool GenerateRecords { get; set; } = false;
 }

@@ -16,6 +16,7 @@ public class CodeGenerator
     private readonly string _validatorTemplate;
     private readonly string _enumTemplate;
     private readonly string _constantsTemplate;
+    private readonly string? _dtoRecordTemplate;
     private readonly CodeGenerationOptions _options;
     private readonly ModifierConfiguration? _modifierConfig;
 
@@ -29,13 +30,19 @@ public class CodeGenerator
         
         // Load templates
         var basePath = GetTemplatesPath();
-        var requiredTemplates = new[]
+        var requiredTemplates = new List<(string, string)>
         {
             ("DTO.hbs", "DTO template"),
             ("Validator.hbs", "Validator template"), 
             ("Enum.hbs", "Enum template"),
             ("Constants.hbs", "Constants template")
         };
+
+        // Add DTORecord template if records are enabled
+        if (_options.GenerateRecords)
+        {
+            requiredTemplates.Add(("DTORecord.hbs", "DTO Record template"));
+        }
 
         var missingTemplates = new List<string>();
 
@@ -62,6 +69,12 @@ public class CodeGenerator
         _validatorTemplate = File.ReadAllText(Path.Combine(basePath, "Validator.hbs"));
         _enumTemplate = File.ReadAllText(Path.Combine(basePath, "Enum.hbs"));
         _constantsTemplate = File.ReadAllText(Path.Combine(basePath, "Constants.hbs"));
+        
+        // Load record template if records are enabled
+        if (_options.GenerateRecords)
+        {
+            _dtoRecordTemplate = File.ReadAllText(Path.Combine(basePath, "DTORecord.hbs"));
+        }
     }
 
     private ModifierConfiguration? LoadModifierConfiguration()
@@ -152,6 +165,13 @@ public class CodeGenerator
 
     private string GenerateDto(ClassInfo classInfo)
     {
+        // Use record template if records are enabled
+        if (_options.GenerateRecords && _dtoRecordTemplate != null)
+        {
+            var recordTemplate = _handlebars.Compile(_dtoRecordTemplate);
+            return recordTemplate(classInfo);
+        }
+        
         var template = _handlebars.Compile(_dtoTemplate);
         return template(classInfo);
     }
@@ -398,24 +418,33 @@ public class CodeGenerator
         // Handle null schema
         if (schema == null)
         {
+            var nullSchemaRequired = requiredFields?.Contains(name) ?? false;
+            var nullSchemaNullable = _options.UseNullableReferenceTypes && !nullSchemaRequired;
             return new PropertyInfo
             {
                 Name = ToPascalCase(name),
                 JsonPropertyName = name,
-                Type = "object",
+                Type = nullSchemaNullable ? "object?" : "object",
                 Description = "",
-                IsRequired = requiredFields?.Contains(name) ?? false,
+                IsRequired = nullSchemaRequired,
+                IsNullable = nullSchemaNullable,
+                UseRequiredKeyword = _options.UseRequiredKeyword && nullSchemaRequired,
                 ValidationRules = []
             };
         }
+
+        var isRequired = requiredFields?.Contains(name) ?? false;
+        var isNullable = _options.UseNullableReferenceTypes && !isRequired;
 
         var propertyInfo = new PropertyInfo
         {
             Name = ToPascalCase(name),
             JsonPropertyName = name,
-            Type = MapSwaggerTypeToCSharpType(schema),
+            Type = MapSwaggerTypeToCSharpType(schema, isNullable),
             Description = schema.Description ?? "",
-            IsRequired = requiredFields?.Contains(name) ?? false,
+            IsRequired = isRequired,
+            IsNullable = isNullable,
+            UseRequiredKeyword = _options.UseRequiredKeyword && isRequired,
             MaxLength = schema.MaxLength,
             MinLength = schema.MinLength,
             MaxItems = schema.MaxItems,
@@ -451,23 +480,32 @@ public class CodeGenerator
         // Handle null schema
         if (schema == null)
         {
+            var nullSchemaRequired2 = requiredFields?.Contains(name) ?? false;
+            var nullSchemaNullable2 = _options.UseNullableReferenceTypes && !nullSchemaRequired2;
             return new PropertyInfo
             {
                 Name = ToPascalCase(name),
                 JsonPropertyName = name,
-                Type = "object",
+                Type = nullSchemaNullable2 ? "object?" : "object",
                 Description = "",
-                IsRequired = requiredFields?.Contains(name) ?? false,
+                IsRequired = nullSchemaRequired2,
+                IsNullable = nullSchemaNullable2,
+                UseRequiredKeyword = _options.UseRequiredKeyword && nullSchemaRequired2,
                 ValidationRules = []
             };
         }
+
+        var isRequired = requiredFields?.Contains(name) ?? false;
+        var isNullable = _options.UseNullableReferenceTypes && !isRequired;
 
         var propertyInfo = new PropertyInfo
         {
             Name = ToPascalCase(name),
             JsonPropertyName = name,
             Description = schema.Description ?? "",
-            IsRequired = requiredFields?.Contains(name) ?? false,
+            IsRequired = isRequired,
+            IsNullable = isNullable,
+            UseRequiredKeyword = _options.UseRequiredKeyword && isRequired,
             MaxLength = schema.MaxLength,
             MinLength = schema.MinLength,
             MaxItems = schema.MaxItems,
@@ -546,7 +584,7 @@ public class CodeGenerator
         // Set the type if not overridden by enum handling
         if (!typeOverridden)
         {
-            propertyInfo.Type = MapSwaggerTypeToCSharpType(schema);
+            propertyInfo.Type = MapSwaggerTypeToCSharpType(schema, propertyInfo.IsNullable);
         }
 
         // Generate validation rules
@@ -768,23 +806,29 @@ public class CodeGenerator
 
     private string MapSwaggerTypeToCSharpType(Schema schema)
     {
+        return MapSwaggerTypeToCSharpType(schema, false);
+    }
+
+    private string MapSwaggerTypeToCSharpType(Schema schema, bool isNullable)
+    {
         // Handle null schema
         if (schema == null)
         {
-            return "object";
+            return isNullable ? "object?" : "object";
         }
 
         // Handle $ref references
         if (!string.IsNullOrEmpty(schema.Ref))
         {
             var refName = schema.Ref.Replace("#/definitions/", "");
-            return ApplyTypeNameFormatting(refName);
+            var typeName = ApplyTypeNameFormatting(refName);
+            return isNullable ? $"{typeName}?" : typeName;
         }
 
         // Handle cases where Type might be null or empty
         var schemaType = schema.Type?.ToLower() ?? "object";
         
-        return schemaType switch
+        var baseType = schemaType switch
         {
             "integer" => schema.Format == "int64" ? "long" : "int",
             "number" => schema.Format == "float" ? "float" : "decimal",
@@ -794,6 +838,24 @@ public class CodeGenerator
             "object" => "object",
             _ => "object"
         };
+
+        // Apply nullability for reference types and value types that support it
+        if (isNullable && _options.UseNullableReferenceTypes)
+        {
+            var isValueType = baseType is "int" or "long" or "float" or "decimal" or "bool";
+            var isReferenceType = baseType is "string" or "DateTime" or "object" || baseType.StartsWith("List<");
+            
+            if (isValueType)
+            {
+                return $"{baseType}?";
+            }
+            else if (isReferenceType && baseType != "object")
+            {
+                return $"{baseType}?";
+            }
+        }
+
+        return baseType;
     }
 
     private string ToPascalCase(string input)
