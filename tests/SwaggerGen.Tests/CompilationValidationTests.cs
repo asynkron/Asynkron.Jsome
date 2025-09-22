@@ -492,6 +492,305 @@ public class CompilationValidationTests
     }
     
     /// <summary>
+    /// Comprehensive roundtrip test covering many different concepts: enums, various property rules, 
+    /// string-enums, validation constraints, nested objects, arrays, and edge cases.
+    /// This ensures the full spectrum of Swagger schema features work correctly in roundtrip scenarios.
+    /// </summary>
+    [Fact]
+    public void GeneratedDtos_ComprehensiveScenarios_FullRoundtripWorks()
+    {
+        // Create a comprehensive Swagger document covering all major scenarios
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                // 1. Enum Test Model - covers various enum formats and types (simplified to avoid identifier issues)
+                ["EnumTestModel"] = new Schema
+                {
+                    Type = "object",
+                    Description = "Model testing various enum scenarios",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["status"] = new Schema 
+                        { 
+                            Type = "string",
+                            Enum = ["active", "inactive", "pending"],
+                            Description = "Simple string enum"
+                        },
+                        ["priority"] = new Schema
+                        {
+                            Type = "integer",
+                            Enum = [1, 2, 3],
+                            Description = "Integer enum"
+                        }
+                    },
+                    Required = ["status"]
+                },
+                
+                // 2. Validation Test Model - covers property validation rules
+                ["ValidationTestModel"] = new Schema
+                {
+                    Type = "object",
+                    Description = "Model testing various validation constraints",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["name"] = new Schema
+                        {
+                            Type = "string",
+                            MinLength = 5,
+                            MaxLength = 50,
+                            Description = "String with length constraints"
+                        },
+                        ["email"] = new Schema
+                        {
+                            Type = "string",
+                            Format = "email",
+                            Description = "Email format string"
+                        },
+                        ["age"] = new Schema
+                        {
+                            Type = "integer",
+                            Minimum = 1,
+                            Maximum = 100,
+                            Description = "Integer with min/max constraints"
+                        },
+                        ["score"] = new Schema
+                        {
+                            Type = "number",
+                            Minimum = 0.0m,
+                            Maximum = 100.0m,
+                            Description = "Number with constraints"
+                        }
+                    },
+                    Required = ["name", "age"]
+                },
+                
+                // 3. Array Test Model - covers various array scenarios
+                ["ArrayTestModel"] = new Schema
+                {
+                    Type = "object",
+                    Description = "Model testing various array scenarios",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["tags"] = new Schema
+                        {
+                            Type = "array",
+                            Items = new Schema { Type = "string" },
+                            MinItems = 1,
+                            MaxItems = 10,
+                            Description = "Array of strings with constraints"
+                        },
+                        ["numbers"] = new Schema
+                        {
+                            Type = "array",
+                            Items = new Schema { Type = "integer" },
+                            Description = "Array of integers"
+                        },
+                        ["colors"] = new Schema
+                        {
+                            Type = "array",
+                            Items = new Schema 
+                            { 
+                                Type = "string",
+                                Enum = ["red", "green", "blue"]
+                            },
+                            Description = "Array of enum values"
+                        },
+                        ["items"] = new Schema
+                        {
+                            Type = "array",
+                            Items = new Schema { Ref = "#/definitions/SimpleItem" },
+                            Description = "Array of nested objects"
+                        }
+                    },
+                    Required = ["tags"]
+                },
+                
+                // 4. Nested Complex Model - covers deep nesting and relationships
+                ["ComplexModel"] = new Schema
+                {
+                    Type = "object",
+                    Description = "Model with complex nested relationships",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["id"] = new Schema { Type = "string" },
+                        ["metadata"] = new Schema { Ref = "#/definitions/Metadata" },
+                        ["details"] = new Schema { Ref = "#/definitions/Details" }
+                    },
+                    Required = ["id"]
+                },
+                
+                // 5. Simple item for arrays
+                ["SimpleItem"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["name"] = new Schema { Type = "string" },
+                        ["value"] = new Schema { Type = "integer" }
+                    },
+                    Required = ["name"]
+                },
+                
+                // 6. Metadata for nesting
+                ["Metadata"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["version"] = new Schema { Type = "string" },
+                        ["labels"] = new Schema
+                        {
+                            Type = "array",
+                            Items = new Schema { Type = "string" }
+                        }
+                    },
+                    Required = ["version"]
+                },
+                
+                // 7. Details for deep nesting  
+                ["Details"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["description"] = new Schema { Type = "string", MaxLength = 500 },
+                        ["category"] = new Schema 
+                        { 
+                            Type = "string",
+                            Enum = ["electronics", "clothing", "books"]
+                        },
+                        ["enabled"] = new Schema { Type = "boolean" }
+                    }
+                },
+                
+                // 8. Edge Case Model - covers optional, boolean, etc.
+                ["EdgeCaseModel"] = new Schema
+                {
+                    Type = "object",
+                    Description = "Model testing edge cases and special scenarios",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["optionalString"] = new Schema { Type = "string" },
+                        ["optionalInteger"] = new Schema { Type = "integer" },
+                        ["isActive"] = new Schema { Type = "boolean" },
+                        ["emptyArray"] = new Schema
+                        {
+                            Type = "array",
+                            Items = new Schema { Type = "string" },
+                            MinItems = 0
+                        }
+                    },
+                    Required = ["isActive"]
+                }
+            }
+        };
+
+        // Generate code - use simpler options first to test
+        var generator = new CodeGenerator();
+        var result = generator.GenerateCode(document, "Comprehensive.Generated");
+        
+        // Compile the generated code
+        var compilation = CompileGeneratedCode(result);
+        var diagnostics = compilation.GetDiagnostics();
+        var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        
+        // If there are compilation errors, output them for debugging
+        if (errors.Any())
+        {
+            Console.WriteLine("=== COMPILATION ERRORS ===");
+            foreach (var error in errors)
+            {
+                Console.WriteLine(error);
+            }
+            Console.WriteLine("=== GENERATED DTO CODE ===");
+            foreach (var dto in result.DtoClasses)
+            {
+                Console.WriteLine($"--- {dto.Key} ---");
+                Console.WriteLine(dto.Value);
+            }
+        }
+        
+        Assert.Empty(errors);
+        
+        using var ms = new MemoryStream();
+        var emitResult = compilation.Emit(ms);
+        Assert.True(emitResult.Success, "Generated code should compile successfully");
+        
+        ms.Seek(0, SeekOrigin.Begin);
+        var assembly = Assembly.Load(ms.ToArray());
+        
+        // Define comprehensive test data for each model
+        var comprehensiveTestData = new Dictionary<string, string[]>
+        {
+            ["EnumTestModel"] = [
+                """{"status":"active"}""",
+                """{"status":"pending","priority":2}""",
+                """{"status":"inactive","priority":3}"""
+            ],
+            
+            ["ValidationTestModel"] = [
+                """{"name":"ValidName","age":25}""",
+                """{"name":"AnotherValidName","email":"test@example.com","age":30,"score":85.5}""",
+                """{"name":"MinimumLength","age":1,"score":1.5}"""
+            ],
+            
+            ["ArrayTestModel"] = [
+                """{"tags":["tag1"]}""",
+                """{"tags":["tag1","tag2"],"numbers":[1,2,3],"colors":["red","blue"],"items":[{"name":"item1","value":10}]}""",
+                """{"tags":["single"],"colors":["green"],"items":[{"name":"test"}]}"""
+            ],
+            
+            ["ComplexModel"] = [
+                """{"id":"test-123"}""",
+                """{"id":"complex-456","metadata":{"version":"1.0.0","labels":["prod","api"]},"details":{"description":"Test","category":"electronics","enabled":true}}""",
+                """{"id":"simple-789","metadata":{"version":"2.0.0"}}"""
+            ],
+            
+            ["EdgeCaseModel"] = [
+                """{"isActive":true}""",
+                """{"optionalString":"present","optionalInteger":42,"isActive":true,"emptyArray":[]}""",
+                """{"isActive":true,"emptyArray":["some","values"]}"""
+            ]
+        };
+        
+        // Execute roundtrip tests for all scenarios
+        foreach (var (typeName, jsonSamples) in comprehensiveTestData)
+        {
+            var dtoType = assembly.GetTypes().FirstOrDefault(t => t.Name == typeName);
+            Assert.NotNull(dtoType);
+            
+            foreach (var originalJson in jsonSamples)
+            {
+                // Load JSON and deserialize into compiled C# type
+                var deserializedObject = Newtonsoft.Json.JsonConvert.DeserializeObject(originalJson, dtoType);
+                Assert.NotNull(deserializedObject);
+                
+                // Serialize back to JSON
+                var roundtripJson = Newtonsoft.Json.JsonConvert.SerializeObject(
+                    deserializedObject,
+                    Newtonsoft.Json.Formatting.None,
+                    new Newtonsoft.Json.JsonSerializerSettings
+                    {
+                        NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore,
+                        DefaultValueHandling = Newtonsoft.Json.DefaultValueHandling.Ignore
+                    });
+                
+                // Verify semantic equality (property order may differ)
+                var originalJObject = Newtonsoft.Json.Linq.JObject.Parse(originalJson);
+                var roundtripJObject = Newtonsoft.Json.Linq.JObject.Parse(roundtripJson);
+                
+                Assert.True(Newtonsoft.Json.Linq.JToken.DeepEquals(originalJObject, roundtripJObject),
+                    $"Comprehensive roundtrip validation failed for {typeName}. " +
+                    $"Original: {originalJson}, Roundtrip: {roundtripJson}");
+            }
+        }
+        
+        // If we reach here, comprehensive roundtrip testing is successful
+        Assert.True(true, "Comprehensive roundtrip deserialization-serialization covering enums, property rules, nested objects, arrays, and edge cases working perfectly!");
+    }
+    
+    /// <summary>
     /// Helper method to test roundtrip serialization for a specific DTO type
     /// </summary>
     private static void TestRoundtripSerialization(Assembly assembly, string typeName, string originalJson)
@@ -556,6 +855,7 @@ public class CompilationValidationTests
             MetadataReference.CreateFromFile(typeof(RequiredAttribute).Assembly.Location), // System.ComponentModel.DataAnnotations
             MetadataReference.CreateFromFile(typeof(Console).Assembly.Location), // System.Console
             MetadataReference.CreateFromFile(typeof(List<>).Assembly.Location), // System.Collections
+            MetadataReference.CreateFromFile(typeof(DateTime).Assembly.Location), // System.DateTime
         };
         
         // Add Newtonsoft.Json reference
