@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using System.Reflection;
 using System.ComponentModel.DataAnnotations;
+using SwaggerGen;
 
 namespace SwaggerGen.Tests;
 
@@ -278,6 +279,249 @@ public class CompilationValidationTests
         Assert.True(emitResult.Success);
     }
     
+    /// <summary>
+    /// Tests full roundtrip serialization-deserialization with Pet demo DTOs
+    /// </summary>
+    [Fact]
+    public void GeneratedDtos_PetDemo_FullRoundtripSerializationWorks()
+    {
+        // Arrange - Use the petstore swagger document to generate Pet DTOs
+        var json = File.ReadAllText(Path.Combine(
+            Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "SwaggerGen", "Samples", "petstore-swagger.json"));
+        var document = SwaggerParser.Parse(json);
+        var generator = new CodeGenerator();
+        
+        // Act - Generate code
+        var result = generator.GenerateCode(document, "PetStore.Generated");
+        
+        // Assert - Verify we have the expected DTOs
+        Assert.True(result.DtoClasses.ContainsKey("Pet"), "Pet DTO should be generated");
+        Assert.True(result.DtoClasses.ContainsKey("NewPet"), "NewPet DTO should be generated");
+        Assert.True(result.DtoClasses.ContainsKey("Error"), "Error DTO should be generated");
+        
+        // Compile the generated code
+        var compilation = CompileGeneratedCode(result);
+        
+        // Verify compilation succeeded
+        var diagnostics = compilation.GetDiagnostics();
+        var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.Empty(errors); // Should have no compilation errors
+        
+        // Emit to assembly
+        using var ms = new MemoryStream();
+        var emitResult = compilation.Emit(ms);
+        Assert.True(emitResult.Success, "Code should compile successfully");
+        
+        // Load the compiled assembly
+        ms.Seek(0, SeekOrigin.Begin);
+        var assembly = Assembly.Load(ms.ToArray());
+        
+        // Test roundtrip serialization for each DTO type with various scenarios
+        TestRoundtripSerialization(assembly, "Pet", """{"name":"Buddy","tag":"dog","id":12345}""");
+        TestRoundtripSerialization(assembly, "Pet", """{"name":"Rex","id":67890}"""); // No tag (optional field)
+        TestRoundtripSerialization(assembly, "NewPet", """{"name":"Fluffy","tag":"cat"}""");
+        TestRoundtripSerialization(assembly, "NewPet", """{"name":"Max"}"""); // No tag (optional field)
+        TestRoundtripSerialization(assembly, "Error", """{"code":404,"message":"Pet not found"}""");
+        TestRoundtripSerialization(assembly, "Error", """{"code":500,"message":"Internal server error"}""");
+    }
+    
+    /// <summary>
+    /// Tests roundtrip serialization with complex nested objects from Stripe schema
+    /// </summary>
+    [Fact]
+    public void GeneratedDtos_ComplexObjects_FullRoundtripSerializationWorks()
+    {
+        // Arrange - Create a complex document with nested objects
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["Customer"] = new Schema
+                {
+                    Type = "object",
+                    Description = "A customer with nested address",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["id"] = new Schema { Type = "string" },
+                        ["name"] = new Schema { Type = "string" },
+                        ["email"] = new Schema { Type = "string" },
+                        ["address"] = new Schema { Ref = "#/definitions/Address" },
+                        ["tags"] = new Schema
+                        {
+                            Type = "array",
+                            Items = new Schema { Type = "string" }
+                        }
+                    },
+                    Required = ["id", "name"]
+                },
+                ["Address"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["street"] = new Schema { Type = "string" },
+                        ["city"] = new Schema { Type = "string" },
+                        ["zipCode"] = new Schema { Type = "string" },
+                        ["country"] = new Schema { Type = "string" }
+                    },
+                    Required = ["street", "city"]
+                }
+            }
+        };
+
+        var generator = new CodeGenerator();
+        
+        // Act - Generate code
+        var result = generator.GenerateCode(document, "Complex.Generated");
+        
+        // Compile the generated code
+        var compilation = CompileGeneratedCode(result);
+        
+        // Verify compilation succeeded
+        var diagnostics = compilation.GetDiagnostics();
+        var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.Empty(errors);
+        
+        // Emit to assembly
+        using var ms = new MemoryStream();
+        var emitResult = compilation.Emit(ms);
+        Assert.True(emitResult.Success);
+        
+        // Load the compiled assembly
+        ms.Seek(0, SeekOrigin.Begin);
+        var assembly = Assembly.Load(ms.ToArray());
+        
+        // Test roundtrip serialization with complex nested objects
+        TestRoundtripSerialization(assembly, "Customer", 
+            """{"id":"cust_123","name":"John Doe","email":"john@example.com","address":{"street":"123 Main St","city":"Springfield","zipCode":"12345","country":"USA"},"tags":["vip","premium"]}""");
+        
+        TestRoundtripSerialization(assembly, "Customer", 
+            """{"id":"cust_456","name":"Jane Smith"}"""); // Minimal required fields only
+        
+        TestRoundtripSerialization(assembly, "Address", 
+            """{"street":"456 Oak Ave","city":"Boston","zipCode":"02101"}""");
+    }
+    
+    /// <summary>
+    /// Tests the exact scenario described in the problem statement:
+    /// Load JSON file, deserialize to compiled C# type, serialize back to JSON, verify identical
+    /// </summary>
+    [Fact]
+    public void GeneratedDtos_ExactProblemStatementScenario_RoundtripWithJsonFiles()
+    {
+        // Step 1: Generate the Pet demo DTOs
+        var swaggerJson = File.ReadAllText(Path.Combine(
+            Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "SwaggerGen", "Samples", "petstore-swagger.json"));
+        var document = SwaggerParser.Parse(swaggerJson);
+        var generator = new CodeGenerator();
+        var result = generator.GenerateCode(document, "PetDemo.Generated");
+        
+        // Step 2: Compile the code via Roslyn
+        var compilation = CompileGeneratedCode(result);
+        var diagnostics = compilation.GetDiagnostics();
+        var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.Empty(errors);
+        
+        using var ms = new MemoryStream();
+        var emitResult = compilation.Emit(ms);
+        Assert.True(emitResult.Success);
+        
+        ms.Seek(0, SeekOrigin.Begin);
+        var assembly = Assembly.Load(ms.ToArray());
+        
+        // Step 3: Create sample JSON files representing various samples of said entities
+        var sampleJsonFiles = new Dictionary<string, string[]>
+        {
+            ["Pet"] = [
+                """{"name":"Buddy","tag":"dog","id":12345}""",
+                """{"name":"Rex","id":67890}""",
+                """{"name":"Whiskers","tag":"cat","id":999}"""
+            ],
+            ["NewPet"] = [
+                """{"name":"Fluffy","tag":"cat"}""",
+                """{"name":"Max"}""",
+                """{"name":"Luna","tag":"rabbit"}"""
+            ],
+            ["Error"] = [
+                """{"code":404,"message":"Pet not found"}""",
+                """{"code":500,"message":"Internal server error"}""",
+                """{"code":400,"message":"Invalid pet data"}"""
+            ]
+        };
+        
+        // Step 4-6: For each sample JSON file:
+        // - Load the JSON file
+        // - Deserialize it into our compiled C# type
+        // - Serialize the same entity back to JSON
+        // - Verify the result is identical to the original
+        foreach (var (typeName, jsonSamples) in sampleJsonFiles)
+        {
+            var dtoType = assembly.GetTypes().FirstOrDefault(t => t.Name == typeName);
+            Assert.NotNull(dtoType);
+            
+            foreach (var originalJson in jsonSamples)
+            {
+                // Simulate loading from a JSON file
+                var loadedJson = originalJson;
+                
+                // Deserialize into our compiled C# type
+                var deserializedObject = Newtonsoft.Json.JsonConvert.DeserializeObject(loadedJson, dtoType);
+                Assert.NotNull(deserializedObject);
+                
+                // Serialize the same entity back to JSON
+                var roundtripJson = Newtonsoft.Json.JsonConvert.SerializeObject(
+                    deserializedObject,
+                    Newtonsoft.Json.Formatting.None,
+                    new Newtonsoft.Json.JsonSerializerSettings
+                    {
+                        NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
+                    });
+                
+                // Verify the result is identical to the original
+                var originalJObject = Newtonsoft.Json.Linq.JObject.Parse(originalJson);
+                var roundtripJObject = Newtonsoft.Json.Linq.JObject.Parse(roundtripJson);
+                
+                Assert.True(Newtonsoft.Json.Linq.JToken.DeepEquals(originalJObject, roundtripJObject),
+                    $"Full roundtrip validation failed for {typeName}. " +
+                    $"Original: {originalJson}, Roundtrip: {roundtripJson}");
+            }
+        }
+        
+        // If we reach here, "everything is good" as stated in the problem statement
+        Assert.True(true, "Full roundtrip deserialization-serialization working perfectly!");
+    }
+    
+    /// <summary>
+    /// Helper method to test roundtrip serialization for a specific DTO type
+    /// </summary>
+    private static void TestRoundtripSerialization(Assembly assembly, string typeName, string originalJson)
+    {
+        // Get the DTO type from the compiled assembly
+        var dtoType = assembly.GetTypes().FirstOrDefault(t => t.Name == typeName);
+        Assert.NotNull(dtoType);
+        
+        // Deserialize the original JSON into the DTO
+        var deserializedObject = Newtonsoft.Json.JsonConvert.DeserializeObject(originalJson, dtoType);
+        Assert.NotNull(deserializedObject);
+        
+        // Serialize the object back to JSON
+        var roundtripJson = Newtonsoft.Json.JsonConvert.SerializeObject(
+            deserializedObject, 
+            Newtonsoft.Json.Formatting.None,
+            new Newtonsoft.Json.JsonSerializerSettings
+            {
+                NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
+            });
+        
+        // Parse both JSON strings to JObjects for comparison (ignoring property order)
+        var originalJObject = Newtonsoft.Json.Linq.JObject.Parse(originalJson);
+        var roundtripJObject = Newtonsoft.Json.Linq.JObject.Parse(roundtripJson);
+        
+        // Assert that the JSON is identical after roundtrip
+        Assert.True(Newtonsoft.Json.Linq.JToken.DeepEquals(originalJObject, roundtripJObject), 
+            $"Roundtrip failed for {typeName}. Original: {originalJson}, Roundtrip: {roundtripJson}");
+    }
+
     /// <summary>
     /// Helper method to compile generated code using Roslyn
     /// </summary>
