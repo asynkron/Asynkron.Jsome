@@ -6,6 +6,11 @@
 # Generated code output directory
 generated/
 
+# NuGet validation artifacts
+validation-nupkg/
+validation-extract/
+test-nupkg/
+
 # User-specific files
 *.rsuser
 *.suo
