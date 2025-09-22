@@ -10,4 +10,5 @@ public class ClassInfo
     public string Description { get; set; } = string.Empty;
     public List<PropertyInfo> Properties { get; set; } = [];
     public bool UseSystemTextJson { get; set; }
+    public bool UseSwashbuckleAttributes { get; set; }
 }

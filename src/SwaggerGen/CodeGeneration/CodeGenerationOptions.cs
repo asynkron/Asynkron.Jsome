@@ -58,4 +58,11 @@ public class CodeGenerationOptions
     /// Default: false (for backward compatibility with Newtonsoft.Json)
     /// </summary>
     public bool UseSystemTextJson { get; set; } = false;
+
+    /// <summary>
+    /// When true, generates Swashbuckle.AspNetCore.Annotations attributes (SwaggerSchema, SwaggerExampleValue)
+    /// based on OpenAPI metadata in addition to existing DataAnnotations.
+    /// Default: false (for backward compatibility)
+    /// </summary>
+    public bool UseSwashbuckleAttributes { get; set; } = false;
 }

@@ -79,6 +79,10 @@ class Program
             aliases: new[] { "--system-text-json" },
             description: "Use System.Text.Json attributes and enhanced validation (JsonPropertyName, JsonIgnore conditions, Required(AllowEmptyStrings = false), StringLength)");
 
+        var useSwashbuckleAttributesOption = new Option<bool>(
+            aliases: new[] { "--swashbuckle-attributes" },
+            description: "Generate Swashbuckle.AspNetCore.Annotations attributes (SwaggerSchema, SwaggerExampleValue) based on OpenAPI metadata");
+
         var schemaDirOption = new Option<DirectoryInfo?>(
             aliases: new[] { "--schema-dir", "-s" },
             description: "Directory containing multiple JSON Schema files to process instead of a single Swagger file");
@@ -94,6 +98,7 @@ class Program
             modernFeaturesOption,
             generateRecordsOption,
             useSystemTextJsonOption,
+            useSwashbuckleAttributesOption,
             schemaDirOption
         };
 
@@ -108,9 +113,10 @@ class Program
             var useModern = context.ParseResult.GetValueForOption(modernFeaturesOption);
             var generateRecords = context.ParseResult.GetValueForOption(generateRecordsOption);
             var useSystemTextJson = context.ParseResult.GetValueForOption(useSystemTextJsonOption);
+            var useSwashbuckleAttributes = context.ParseResult.GetValueForOption(useSwashbuckleAttributesOption);
             var schemaDir = context.ParseResult.GetValueForOption(schemaDirOption);
             
-            await HandleGenerateCommand(swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir, useModern, generateRecords, useSystemTextJson, schemaDir);
+            await HandleGenerateCommand(swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir, useModern, generateRecords, useSystemTextJson, useSwashbuckleAttributes, schemaDir);
         });
 
         return generateCommand;
@@ -128,7 +134,7 @@ class Program
         return helpCommand;
     }
 
-    private static async Task HandleGenerateCommand(FileInfo? swaggerFile, FileInfo? configFile, string? namespaceOverride, DirectoryInfo? outputDir, bool skipConfirmation, DirectoryInfo? templateDir, bool useModern, bool generateRecords, bool useSystemTextJson, DirectoryInfo? schemaDir)
+    private static async Task HandleGenerateCommand(FileInfo? swaggerFile, FileInfo? configFile, string? namespaceOverride, DirectoryInfo? outputDir, bool skipConfirmation, DirectoryInfo? templateDir, bool useModern, bool generateRecords, bool useSystemTextJson, bool useSwashbuckleAttributes, DirectoryInfo? schemaDir)
     {
         try
         {
@@ -169,7 +175,7 @@ class Program
             }
 
             // Generate code
-            await GenerateCode(document, config, namespaceOverride, outputDir, templateDir, useModern, generateRecords, useSystemTextJson);
+            await GenerateCode(document, config, namespaceOverride, outputDir, templateDir, useModern, generateRecords, useSystemTextJson, useSwashbuckleAttributes);
 
             AnsiConsole.MarkupLine("[green]✓ Code generation completed successfully![/]");
         }
@@ -401,7 +407,7 @@ class Program
         AnsiConsole.WriteLine();
     }
 
-    private static async Task GenerateCode(SwaggerDocument document, ModifierConfiguration? config, string? namespaceOverride, DirectoryInfo? outputDir, DirectoryInfo? templateDir, bool useModern, bool generateRecords, bool useSystemTextJson)
+    private static async Task GenerateCode(SwaggerDocument document, ModifierConfiguration? config, string? namespaceOverride, DirectoryInfo? outputDir, DirectoryInfo? templateDir, bool useModern, bool generateRecords, bool useSystemTextJson, bool useSwashbuckleAttributes)
     {
         AnsiConsole.MarkupLine("[green]⚙️  Generating C# code...[/]");
         
@@ -411,7 +417,8 @@ class Program
             UseNullableReferenceTypes = useModern,
             UseRequiredKeyword = useModern,
             GenerateRecords = generateRecords,
-            UseSystemTextJson = useSystemTextJson
+            UseSystemTextJson = useSystemTextJson,
+            UseSwashbuckleAttributes = useSwashbuckleAttributes
         };
         
         if (config != null)
