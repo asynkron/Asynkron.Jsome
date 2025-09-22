@@ -62,10 +62,10 @@ public class Schema
     public int? MinProperties { get; set; }
 
     [JsonProperty("required")]
-    public List<string> Required { get; set; } = new();
+    public List<string> Required { get; set; } = [];
 
     [JsonProperty("enum")]
-    public List<object> Enum { get; set; } = new();
+    public List<object> Enum { get; set; } = [];
 
     [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
@@ -74,7 +74,7 @@ public class Schema
     public Schema? Items { get; set; }
 
     [JsonProperty("allOf")]
-    public List<Schema> AllOf { get; set; } = new();
+    public List<Schema> AllOf { get; set; } = [];
 
     [JsonProperty("properties")]
     public Dictionary<string, Schema> Properties { get; set; } = new();

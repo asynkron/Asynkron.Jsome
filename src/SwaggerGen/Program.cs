@@ -47,19 +47,19 @@ class Program
         };
         
         var configOption = new Option<FileInfo?>(
-            aliases: new[] { "--config", "-c" },
+            aliases: ["--config", "-c"],
             description: "Path to YAML or JSON configuration file for customizing generation");
             
         var namespaceOption = new Option<string?>(
-            aliases: new[] { "--namespace", "-n" },
+            aliases: ["--namespace", "-n"],
             description: "Override the default namespace for generated code");
             
         var outputOption = new Option<DirectoryInfo?>(
-            aliases: new[] { "--output", "-o" },
+            aliases: ["--output", "-o"],
             description: "Output directory for generated files (default: console output only)");
 
         var yesOption = new Option<bool>(
-            aliases: new[] { "--yes", "-y" },
+            aliases: ["--yes", "-y"],
             description: "Skip confirmation prompts and proceed automatically");
             
         var generateCommand = new Command("generate", "Generate C# code from a Swagger specification")

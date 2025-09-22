@@ -25,7 +25,7 @@ public class ModifierConfigurationIntegrationTests
                         ["password"] = new Schema { Type = "string" },
                         ["email"] = new Schema { Type = "string" }
                     },
-                    Required = new List<string> { "id", "name" }
+                    Required = ["id", "name"]
                 }
             }
         };
@@ -67,7 +67,7 @@ public class ModifierConfigurationIntegrationTests
                         ["name"] = new Schema { Type = "string", MaxLength = 50 },
                         ["price"] = new Schema { Type = "number", Minimum = 0 }
                     },
-                    Required = new List<string> { "name" }
+                    Required = ["name"]
                 }
             }
         };
@@ -257,7 +257,7 @@ public class ModifierConfigurationIntegrationTests
                             UniqueItems = true
                         }
                     },
-                    Required = new List<string> { "items" }
+                    Required = ["items"]
                 }
             }
         };
@@ -291,12 +291,12 @@ public class ModifierConfigurationIntegrationTests
                         ["status"] = new Schema 
                         { 
                             Type = "integer",
-                            Enum = new List<object> { 1, 2, 3 }
+                            Enum = [1, 2, 3]
                         },
                         ["category"] = new Schema 
                         { 
                             Type = "string",
-                            Enum = new List<object> { "premium", "basic" }
+                            Enum = ["premium", "basic"]
                         },
                         ["address"] = new Schema { Ref = "#/definitions/Address" }
                     }
@@ -380,7 +380,7 @@ public class ModifierConfigurationIntegrationTests
                         ["type"] = new Schema 
                         { 
                             Type = "integer",
-                            Enum = new List<object> { 1, 2 }
+                            Enum = [1, 2]
                         }
                     }
                 }
@@ -435,7 +435,7 @@ public class ModifierConfigurationIntegrationTests
                         ["priority"] = new Schema 
                         { 
                             Type = "string",
-                            Enum = new List<object> { "high", "low" }
+                            Enum = ["high", "low"]
                         }
                     }
                 }

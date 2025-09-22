@@ -74,7 +74,7 @@ public class Header
     public bool? UniqueItems { get; set; }
 
     [JsonProperty("enum")]
-    public List<object> Enum { get; set; } = new();
+    public List<object> Enum { get; set; } = [];
 
     [JsonProperty("multipleOf")]
     public decimal? MultipleOf { get; set; }
@@ -131,7 +131,7 @@ public class Items
     public bool? UniqueItems { get; set; }
 
     [JsonProperty("enum")]
-    public List<object> Enum { get; set; } = new();
+    public List<object> Enum { get; set; } = [];
 
     [JsonProperty("multipleOf")]
     public decimal? MultipleOf { get; set; }

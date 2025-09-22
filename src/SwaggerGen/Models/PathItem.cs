@@ -29,7 +29,7 @@ public class PathItem
     public Operation? Patch { get; set; }
 
     [JsonProperty("parameters")]
-    public List<Parameter> Parameters { get; set; } = new();
+    public List<Parameter> Parameters { get; set; } = [];
 }
 
 /// <summary>
@@ -38,7 +38,7 @@ public class PathItem
 public class Operation
 {
     [JsonProperty("tags")]
-    public List<string> Tags { get; set; } = new();
+    public List<string> Tags { get; set; } = [];
 
     [JsonProperty("summary")]
     public string Summary { get; set; } = string.Empty;
@@ -50,19 +50,19 @@ public class Operation
     public string OperationId { get; set; } = string.Empty;
 
     [JsonProperty("consumes")]
-    public List<string> Consumes { get; set; } = new();
+    public List<string> Consumes { get; set; } = [];
 
     [JsonProperty("produces")]
-    public List<string> Produces { get; set; } = new();
+    public List<string> Produces { get; set; } = [];
 
     [JsonProperty("parameters")]
-    public List<Parameter> Parameters { get; set; } = new();
+    public List<Parameter> Parameters { get; set; } = [];
 
     [JsonProperty("responses")]
     public Dictionary<string, Response> Responses { get; set; } = new();
 
     [JsonProperty("schemes")]
-    public List<string> Schemes { get; set; } = new();
+    public List<string> Schemes { get; set; } = [];
 
     [JsonProperty("deprecated")]
     public bool Deprecated { get; set; }

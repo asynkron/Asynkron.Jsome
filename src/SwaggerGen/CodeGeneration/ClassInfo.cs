@@ -8,5 +8,5 @@ public class ClassInfo
     public string ClassName { get; set; } = string.Empty;
     public string Namespace { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public List<PropertyInfo> Properties { get; set; } = new();
+    public List<PropertyInfo> Properties { get; set; } = [];
 }

@@ -8,7 +8,7 @@ public class EnumInfo
     public string EnumName { get; set; } = string.Empty;
     public string Namespace { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public List<EnumValueInfo> Values { get; set; } = new();
+    public List<EnumValueInfo> Values { get; set; } = [];
 }
 
 /// <summary>
@@ -29,7 +29,7 @@ public class ConstantsInfo
     public string ClassName { get; set; } = string.Empty;
     public string Namespace { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public List<ConstantInfo> Constants { get; set; } = new();
+    public List<ConstantInfo> Constants { get; set; } = [];
 }
 
 /// <summary>

@@ -24,7 +24,7 @@ public class CodeGenerationTests
                         ["id"] = new Schema { Type = "integer" },
                         ["name"] = new Schema { Type = "string" }
                     },
-                    Required = new List<string> { "name" }
+                    Required = ["name"]
                 }
             }
         };
@@ -67,7 +67,7 @@ public class CodeGenerationTests
                             MinLength = 5
                         }
                     },
-                    Required = new List<string> { "email" }
+                    Required = ["email"]
                 }
             }
         };
@@ -157,7 +157,7 @@ public class CodeGenerationTests
                             Pattern = @"^\d{3}-\d{2}-\d{4}$"
                         }
                     },
-                    Required = new List<string> { "score" }
+                    Required = ["score"]
                 }
             }
         };
@@ -287,7 +287,7 @@ public class CodeGenerationTests
                             MinItems = 2
                         }
                     },
-                    Required = new List<string> { "tags" }
+                    Required = ["tags"]
                 }
             }
         };
@@ -366,12 +366,12 @@ public class CodeGenerationTests
                         ["status"] = new Schema 
                         { 
                             Type = "string",
-                            Enum = new List<object> { "active", "inactive", "pending" }
+                            Enum = ["active", "inactive", "pending"]
                         },
                         ["priority"] = new Schema
                         {
                             Type = "integer",
-                            Enum = new List<object> { 1, 2, 3 }
+                            Enum = [1, 2, 3]
                         }
                     }
                 }
@@ -412,12 +412,12 @@ public class CodeGenerationTests
                         ["stringEnum"] = new Schema 
                         { 
                             Type = "string",
-                            Enum = new List<object> { "option1", "option2", "option3" }
+                            Enum = ["option1", "option2", "option3"]
                         },
                         ["integerEnum"] = new Schema
                         {
                             Type = "integer",
-                            Enum = new List<object> { 10, 20, 30 }
+                            Enum = [10, 20, 30]
                         }
                     }
                 }
@@ -475,12 +475,12 @@ public class CodeGenerationTests
                         ["status"] = new Schema 
                         { 
                             Type = "string",
-                            Enum = new List<object> { "active", "inactive" }
+                            Enum = ["active", "inactive"]
                         },
                         ["priority"] = new Schema
                         {
                             Type = "integer",
-                            Enum = new List<object> { 1, 2, 3 }
+                            Enum = [1, 2, 3]
                         }
                     }
                 }
@@ -520,12 +520,12 @@ public class CodeGenerationTests
                         ["status"] = new Schema 
                         { 
                             Type = "string",
-                            Enum = new List<object> { "active", "inactive" }
+                            Enum = ["active", "inactive"]
                         },
                         ["priority"] = new Schema
                         {
                             Type = "integer",
-                            Enum = new List<object> { 1, 2, 3 }
+                            Enum = [1, 2, 3]
                         }
                     }
                 }
@@ -572,12 +572,12 @@ public class CodeGenerationTests
                         ["kebab-case-field"] = new Schema
                         {
                             Type = "integer",
-                            Enum = new List<object> { 1, 2 }
+                            Enum = [1, 2]
                         },
                         ["snake_case_field"] = new Schema
                         {
                             Type = "string",
-                            Enum = new List<object> { "value-with-dash", "value_with_underscore", "123-numeric" }
+                            Enum = ["value-with-dash", "value_with_underscore", "123-numeric"]
                         }
                     }
                 }

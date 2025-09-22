@@ -1,3 +1,4 @@
+using System.Globalization;
 using HandlebarsDotNet;
 using SwaggerGen.Models;
 using SwaggerGen.Configuration;
@@ -223,7 +224,7 @@ public class CodeGenerator
                     Constants = propertySchema.Enum.Select(value => new ConstantInfo
                     {
                         Name = GenerateConstantName(value.ToString() ?? ""),
-                        Value = value.ToString() ?? "",
+                        Value =   Convert.ToString(value, CultureInfo.InvariantCulture) ?? "",
                         Description = $"Value: {value}"
                     }).ToList()
                 };
@@ -314,7 +315,8 @@ public class CodeGenerator
                                 if (_modifierConfig != null && !_modifierConfig.IsIncluded(propPath))
                                     continue;
                                 
-                                var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, refSchema.Required ?? new List<string>(), enumInfos, constantsInfos, propPath);
+                                var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, refSchema.Required ??
+                                    [], enumInfos, constantsInfos, propPath);
                                 classInfo.Properties.Add(propertyInfo);
                             }
                         }
@@ -332,7 +334,8 @@ public class CodeGenerator
                         if (_modifierConfig != null && !_modifierConfig.IsIncluded(propPath))
                             continue;
                         
-                        var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, allOfSchema.Required ?? new List<string>(), enumInfos, constantsInfos, propPath);
+                        var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, allOfSchema.Required ??
+                            [], enumInfos, constantsInfos, propPath);
                         classInfo.Properties.Add(propertyInfo);
                     }
                 }
@@ -351,7 +354,8 @@ public class CodeGenerator
                     if (_modifierConfig != null && !_modifierConfig.IsIncluded(propPath))
                         continue;
                     
-                    var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, schema.Required ?? new List<string>(), enumInfos, constantsInfos, propPath);
+                    var propertyInfo = ConvertPropertyToPropertyInfo(name, property.Key, property.Value, schema.Required ??
+                        [], enumInfos, constantsInfos, propPath);
                     classInfo.Properties.Add(propertyInfo);
                 }
             }
@@ -372,7 +376,7 @@ public class CodeGenerator
                 Type = "object",
                 Description = "",
                 IsRequired = requiredFields?.Contains(name) ?? false,
-                ValidationRules = new List<ValidationRule>()
+                ValidationRules = []
             };
         }
 
@@ -391,7 +395,7 @@ public class CodeGenerator
             MaxProperties = schema.MaxProperties,
             MinProperties = schema.MinProperties,
             MultipleOf = schema.MultipleOf,
-            EnumValues = schema.Enum ?? new List<object>()
+            EnumValues = schema.Enum ?? []
         };
 
         // Generate validation rules
@@ -425,7 +429,7 @@ public class CodeGenerator
                 Type = "object",
                 Description = "",
                 IsRequired = requiredFields?.Contains(name) ?? false,
-                ValidationRules = new List<ValidationRule>()
+                ValidationRules = []
             };
         }
 
@@ -443,7 +447,7 @@ public class CodeGenerator
             MaxProperties = schema.MaxProperties,
             MinProperties = schema.MinProperties,
             MultipleOf = schema.MultipleOf,
-            EnumValues = schema.Enum ?? new List<object>()
+            EnumValues = schema.Enum ?? []
         };
 
         // Apply configuration rules
@@ -551,7 +555,7 @@ public class CodeGenerator
             rules.Add(new ValidationRule 
             { 
                 Rule = "NotEmpty", 
-                Parameters = new List<string>(),
+                Parameters = [],
                 Message = customMessage ?? "This field is required"
             });
         }
@@ -562,7 +566,7 @@ public class CodeGenerator
             rules.Add(new ValidationRule 
             { 
                 Rule = "MinimumLength", 
-                Parameters = new List<string> { effectiveMinLength.Value.ToString() },
+                Parameters = [effectiveMinLength.Value.ToString()],
                 Message = customMessage ?? $"Must be at least {effectiveMinLength.Value} characters long"
             });
         }
@@ -572,7 +576,7 @@ public class CodeGenerator
             rules.Add(new ValidationRule 
             { 
                 Rule = "MaximumLength", 
-                Parameters = new List<string> { effectiveMaxLength.Value.ToString() },
+                Parameters = [effectiveMaxLength.Value.ToString()],
                 Message = customMessage ?? $"Must be no more than {effectiveMaxLength.Value} characters long"
             });
         }
@@ -583,7 +587,7 @@ public class CodeGenerator
             rules.Add(new ValidationRule 
             { 
                 Rule = "Matches", 
-                Parameters = new List<string> { $"\"{effectivePattern}\"" },
+                Parameters = [$"\"{effectivePattern}\""],
                 Message = customMessage ?? $"Must match pattern: {effectivePattern}"
             });
         }
@@ -594,7 +598,7 @@ public class CodeGenerator
             rules.Add(new ValidationRule 
             { 
                 Rule = "GreaterThanOrEqualTo", 
-                Parameters = new List<string> { effectiveMinimum.Value.ToString() },
+                Parameters = [effectiveMinimum.Value.ToString()],
                 Message = customMessage ?? $"Must be greater than or equal to {effectiveMinimum.Value}"
             });
         }
@@ -604,7 +608,7 @@ public class CodeGenerator
             rules.Add(new ValidationRule 
             { 
                 Rule = "LessThanOrEqualTo", 
-                Parameters = new List<string> { effectiveMaximum.Value.ToString() },
+                Parameters = [effectiveMaximum.Value.ToString()],
                 Message = customMessage ?? $"Must be less than or equal to {effectiveMaximum.Value}"
             });
         }
@@ -618,7 +622,7 @@ public class CodeGenerator
                 rules.Add(new ValidationRule 
                 { 
                     Rule = "Must", 
-                    Parameters = new List<string> { $"x => x.Count >= {schema.MinItems.Value}" },
+                    Parameters = [$"x => x.Count >= {schema.MinItems.Value}"],
                     Message = $"Must contain at least {schema.MinItems.Value} items"
                 });
             }
@@ -628,7 +632,7 @@ public class CodeGenerator
                 rules.Add(new ValidationRule 
                 { 
                     Rule = "Must", 
-                    Parameters = new List<string> { $"x => x == null || x.Count() >= {schema.MinItems.Value}" },
+                    Parameters = [$"x => x == null || x.Count() >= {schema.MinItems.Value}"],
                     Message = customMessage ?? $"Must contain at least {schema.MinItems.Value} items"
                 });
             }
@@ -642,7 +646,7 @@ public class CodeGenerator
                 rules.Add(new ValidationRule 
                 { 
                     Rule = "Must", 
-                    Parameters = new List<string> { $"x => x.Count <= {schema.MaxItems.Value}" },
+                    Parameters = [$"x => x.Count <= {schema.MaxItems.Value}"],
                     Message = $"Must contain at most {schema.MaxItems.Value} items"
                 });
             }
@@ -652,7 +656,7 @@ public class CodeGenerator
                 rules.Add(new ValidationRule 
                 { 
                     Rule = "Must", 
-                    Parameters = new List<string> { $"x => x == null || x.Count() <= {schema.MaxItems.Value}" },
+                    Parameters = [$"x => x == null || x.Count() <= {schema.MaxItems.Value}"],
                     Message = customMessage ?? $"Must contain no more than {schema.MaxItems.Value} items"
                 });
             }
@@ -666,7 +670,7 @@ public class CodeGenerator
                 rules.Add(new ValidationRule 
                 { 
                     Rule = "Must", 
-                    Parameters = new List<string> { "x => x.Distinct().Count() == x.Count" },
+                    Parameters = ["x => x.Distinct().Count() == x.Count"],
                     Message = "All items must be unique"
                 });
             }
@@ -676,7 +680,7 @@ public class CodeGenerator
                 rules.Add(new ValidationRule 
                 { 
                     Rule = "Must", 
-                    Parameters = new List<string> { "x => x.Distinct().Count() == x.Count()" },
+                    Parameters = ["x => x.Distinct().Count() == x.Count()"],
                     Message = customMessage ?? "All items must be unique"
                 });
             }
@@ -688,7 +692,7 @@ public class CodeGenerator
             rules.Add(new ValidationRule 
             { 
                 Rule = "Must", 
-                Parameters = new List<string> { $"x => x % {schema.MultipleOf.Value} == 0" },
+                Parameters = [$"x => x % {schema.MultipleOf.Value} == 0"],
                 Message = customMessage ?? $"Must be a multiple of {schema.MultipleOf.Value}"
             });
         }
@@ -702,7 +706,7 @@ public class CodeGenerator
                 rules.Add(new ValidationRule 
                 {
                     Rule = "Must", 
-                    Parameters = new List<string> { $"x => Enum.IsDefined(typeof({enumTypeName}), x)" },
+                    Parameters = [$"x => Enum.IsDefined(typeof({enumTypeName}), x)"],
                     Message = customMessage ?? $"Must be a valid {enumTypeName} value"
                 });
             }
@@ -713,7 +717,7 @@ public class CodeGenerator
                 rules.Add(new ValidationRule 
                 {
                     Rule = "Must", 
-                    Parameters = new List<string> { $"x => new[] {{ {enumValues} }}.Contains(x)" },
+                    Parameters = [$"x => new[] {{ {enumValues} }}.Contains(x)"],
                     Message = customMessage ?? $"Must be one of: {enumValues}"
                 });
             }
@@ -724,7 +728,7 @@ public class CodeGenerator
                 rules.Add(new ValidationRule 
                 { 
                     Rule = "Must", 
-                    Parameters = new List<string> { $"x => new[] {{ {enumValues} }}.Contains(x.ToString())" },
+                    Parameters = [$"x => new[] {{ {enumValues} }}.Contains(x.ToString())"],
                     Message = customMessage ?? $"Must be one of: {enumValues}"
                 });
             }
@@ -772,7 +776,7 @@ public class CodeGenerator
         if (char.IsUpper(input[0]))
             return input;
 
-        var words = input.Split(new[] { '_', '-', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        var words = input.Split(['_', '-', ' '], StringSplitOptions.RemoveEmptyEntries);
         
         if (words.Length == 1)
         {

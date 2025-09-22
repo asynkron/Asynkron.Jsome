@@ -13,7 +13,7 @@ public class PropertyInfo
     public int? MaxLength { get; set; }
     public int? MinLength { get; set; }
     public string? DefaultValue { get; set; }
-    public List<ValidationRule> ValidationRules { get; set; } = new();
+    public List<ValidationRule> ValidationRules { get; set; } = [];
     
     // Additional validation properties for arrays, objects, and numbers
     public int? MaxItems { get; set; }
@@ -22,7 +22,7 @@ public class PropertyInfo
     public int? MaxProperties { get; set; }
     public int? MinProperties { get; set; }
     public decimal? MultipleOf { get; set; }
-    public List<object> EnumValues { get; set; } = new();
+    public List<object> EnumValues { get; set; } = [];
     
     // Enum generation properties
     public string? EnumTypeName { get; set; }
@@ -36,6 +36,6 @@ public class PropertyInfo
 public class ValidationRule
 {
     public string Rule { get; set; } = string.Empty;
-    public List<string> Parameters { get; set; } = new();
+    public List<string> Parameters { get; set; } = [];
     public string? Message { get; set; }
 }

@@ -20,13 +20,13 @@ public class SwaggerDocument
     public string BasePath { get; set; } = string.Empty;
 
     [JsonProperty("schemes")]
-    public List<string> Schemes { get; set; } = new();
+    public List<string> Schemes { get; set; } = [];
 
     [JsonProperty("consumes")]
-    public List<string> Consumes { get; set; } = new();
+    public List<string> Consumes { get; set; } = [];
 
     [JsonProperty("produces")]
-    public List<string> Produces { get; set; } = new();
+    public List<string> Produces { get; set; } = [];
 
     [JsonProperty("paths")]
     public Dictionary<string, PathItem> Paths { get; set; } = new();
