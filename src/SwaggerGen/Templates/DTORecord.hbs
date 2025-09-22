@@ -4,6 +4,9 @@ using System.Text.Json.Serialization;
 {{else}}
 using Newtonsoft.Json;
 {{/if}}
+{{#if UseSwashbuckleAttributes}}
+using Swashbuckle.AspNetCore.Annotations;
+{{/if}}
 
 namespace {{Namespace}};
 
@@ -12,6 +15,11 @@ namespace {{Namespace}};
 /// </summary>
 {{#if UseSystemTextJson}}
 [method: JsonConstructor]
+{{/if}}
+{{#if UseSwashbuckleAttributes}}
+{{#if Description}}
+[SwaggerSchema(Description = "{{Description}}")]
+{{/if}}
 {{/if}}
 public partial record {{ClassName}}(
 {{#each Properties}}
@@ -65,6 +73,30 @@ public partial record {{ClassName}}(
     [property: MinLength({{MinLength}})]
     {{else}}
     [MinLength({{MinLength}})]
+    {{/if}}
+    {{/if}}
+    {{/if}}
+    {{#if UseSwashbuckleAttributes}}
+    {{#if SwaggerSchemaDescription}}
+    {{#if UseSystemTextJson}}
+    [property: SwaggerSchema(Description = "{{SwaggerSchemaDescription}}"{{#if SwaggerFormat}}, Format = "{{SwaggerFormat}}"{{/if}})]
+    {{else}}
+    [SwaggerSchema(Description = "{{SwaggerSchemaDescription}}"{{#if SwaggerFormat}}, Format = "{{SwaggerFormat}}"{{/if}})]
+    {{/if}}
+    {{else}}
+    {{#if SwaggerFormat}}
+    {{#if UseSystemTextJson}}
+    [property: SwaggerSchema(Format = "{{SwaggerFormat}}")]
+    {{else}}
+    [SwaggerSchema(Format = "{{SwaggerFormat}}")]
+    {{/if}}
+    {{/if}}
+    {{/if}}
+    {{#if SwaggerExample}}
+    {{#if UseSystemTextJson}}
+    [property: SwaggerExampleValue({{{SwaggerExample}}})]
+    {{else}}
+    [SwaggerExampleValue({{{SwaggerExample}}})]
     {{/if}}
     {{/if}}
     {{/if}}
