@@ -187,7 +187,7 @@ public class CodeGenerator
     {
         if (propertySchema.Enum == null || propertySchema.Enum.Count == 0) return;
 
-        var propertyType = propertySchema.Type?.ToLowerInvariant();
+        var propertyType = propertySchema.Type?.ToLower();
         
         if (propertyType == "integer")
         {
@@ -200,17 +200,11 @@ public class CodeGenerator
                     EnumName = enumName,
                     Namespace = targetNamespace,
                     Description = $"Enum values for {schemaName}.{propertyName}",
-                    Values = propertySchema.Enum.Select((value, index) =>
+                    Values = propertySchema.Enum.Select((value, index) => new EnumValueInfo
                     {
-                        var invariantValue = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
-
-                        return new EnumValueInfo
-                        {
-                            Name = GenerateEnumValueName(value),
-                            Value = value,
-                            ValueLiteral = invariantValue,
-                            Description = $"Value: {invariantValue}"
-                        };
+                        Name = GenerateEnumValueName(value),
+                        Value = value,
+                        Description = $"Value: {value}"
                     }).ToList()
                 };
                 enumInfos.Add(enumName, enumInfo);
@@ -227,16 +221,11 @@ public class CodeGenerator
                     ClassName = className,
                     Namespace = targetNamespace,
                     Description = $"Constants for {schemaName}.{propertyName}",
-                    Constants = propertySchema.Enum.Select(value =>
+                    Constants = propertySchema.Enum.Select(value => new ConstantInfo
                     {
-                        var invariantValue = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
-
-                        return new ConstantInfo
-                        {
-                            Name = GenerateConstantName(invariantValue),
-                            Value = invariantValue,
-                            Description = $"Value: {invariantValue}"
-                        };
+                        Name = GenerateConstantName(value.ToString() ?? ""),
+                        Value =   Convert.ToString(value, CultureInfo.InvariantCulture) ?? "",
+                        Description = $"Value: {value}"
                     }).ToList()
                 };
                 constantsInfos.Add(className, constantsInfo);
@@ -246,7 +235,7 @@ public class CodeGenerator
 
     private string GenerateEnumValueName(object value)
     {
-        var stringValue = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
+        var stringValue = value.ToString() ?? "";
         
         // Convert to PascalCase and ensure it's a valid C# identifier
         var name = ToPascalCase(stringValue);
@@ -266,7 +255,7 @@ public class CodeGenerator
     private string GenerateConstantName(string value)
     {
         // Convert to UPPER_CASE format for constants
-        var name = value.Replace("-", "_").Replace(" ", "_").ToUpperInvariant();
+        var name = value.Replace("-", "_").Replace(" ", "_").ToUpper();
         
         // Ensure it starts with a letter or underscore
         if (name.Length > 0 && char.IsDigit(name[0]))
@@ -501,7 +490,7 @@ public class CodeGenerator
         var typeOverridden = !string.IsNullOrEmpty(rule?.Type);
         if (!typeOverridden && schema.Enum != null && schema.Enum.Count > 0)
         {
-            var propertyType = schema.Type?.ToLowerInvariant();
+            var propertyType = schema.Type?.ToLower();
             
             if (propertyType == "integer")
             {
@@ -574,25 +563,21 @@ public class CodeGenerator
         // String length validation
         if (effectiveMinLength.HasValue)
         {
-            var invariantMinLength = Convert.ToString(effectiveMinLength.Value, CultureInfo.InvariantCulture) ?? string.Empty;
-
-            rules.Add(new ValidationRule
-            {
-                Rule = "MinimumLength",
-                Parameters = [invariantMinLength],
-                Message = customMessage ?? $"Must be at least {invariantMinLength} characters long"
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "MinimumLength", 
+                Parameters = [effectiveMinLength.Value.ToString()],
+                Message = customMessage ?? $"Must be at least {effectiveMinLength.Value} characters long"
             });
         }
 
         if (effectiveMaxLength.HasValue)
         {
-            var invariantMaxLength = Convert.ToString(effectiveMaxLength.Value, CultureInfo.InvariantCulture) ?? string.Empty;
-
-            rules.Add(new ValidationRule
-            {
-                Rule = "MaximumLength",
-                Parameters = [invariantMaxLength],
-                Message = customMessage ?? $"Must be no more than {invariantMaxLength} characters long"
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "MaximumLength", 
+                Parameters = [effectiveMaxLength.Value.ToString()],
+                Message = customMessage ?? $"Must be no more than {effectiveMaxLength.Value} characters long"
             });
         }
 
@@ -610,25 +595,21 @@ public class CodeGenerator
         // Numeric range validation
         if (effectiveMinimum.HasValue)
         {
-            var invariantMinimum = Convert.ToString(effectiveMinimum.Value, CultureInfo.InvariantCulture) ?? string.Empty;
-
-            rules.Add(new ValidationRule
-            {
-                Rule = "GreaterThanOrEqualTo",
-                Parameters = [invariantMinimum],
-                Message = customMessage ?? $"Must be greater than or equal to {invariantMinimum}"
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "GreaterThanOrEqualTo", 
+                Parameters = [effectiveMinimum.Value.ToString()],
+                Message = customMessage ?? $"Must be greater than or equal to {effectiveMinimum.Value}"
             });
         }
 
         if (effectiveMaximum.HasValue)
         {
-            var invariantMaximum = Convert.ToString(effectiveMaximum.Value, CultureInfo.InvariantCulture) ?? string.Empty;
-
-            rules.Add(new ValidationRule
-            {
-                Rule = "LessThanOrEqualTo",
-                Parameters = [invariantMaximum],
-                Message = customMessage ?? $"Must be less than or equal to {invariantMaximum}"
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "LessThanOrEqualTo", 
+                Parameters = [effectiveMaximum.Value.ToString()],
+                Message = customMessage ?? $"Must be less than or equal to {effectiveMaximum.Value}"
             });
         }
 
@@ -708,13 +689,11 @@ public class CodeGenerator
         // Number validation constraints
         if (schema.MultipleOf.HasValue)
         {
-            var invariantMultipleOf = Convert.ToString(schema.MultipleOf.Value, CultureInfo.InvariantCulture) ?? string.Empty;
-
-            rules.Add(new ValidationRule
-            {
-                Rule = "Must",
-                Parameters = [$"x => x % {invariantMultipleOf} == 0"],
-                Message = customMessage ?? $"Must be a multiple of {invariantMultipleOf}"
+            rules.Add(new ValidationRule 
+            { 
+                Rule = "Must", 
+                Parameters = [$"x => x % {schema.MultipleOf.Value} == 0"],
+                Message = customMessage ?? $"Must be a multiple of {schema.MultipleOf.Value}"
             });
         }
 
@@ -734,11 +713,7 @@ public class CodeGenerator
             else if (!string.IsNullOrEmpty(constantsClassName))
             {
                 // For string enums with constants class, use direct string values for backward compatibility
-                var enumValues = string.Join(", ", schema.Enum.Select(e =>
-                {
-                    var invariant = Convert.ToString(e, CultureInfo.InvariantCulture) ?? string.Empty;
-                    return $"\"{invariant}\"";
-                }));
+                var enumValues = string.Join(", ", schema.Enum.Select(e => $"\"{e}\""));
                 rules.Add(new ValidationRule 
                 {
                     Rule = "Must", 
@@ -749,15 +724,11 @@ public class CodeGenerator
             else
             {
                 // Fallback to original validation for backward compatibility
-                var enumValues = string.Join(", ", schema.Enum.Select(e =>
-                {
-                    var invariant = Convert.ToString(e, CultureInfo.InvariantCulture) ?? string.Empty;
-                    return $"\"{invariant}\"";
-                }));
-                rules.Add(new ValidationRule
-                {
-                    Rule = "Must",
-                    Parameters = [$"x => new[] {{ {enumValues} }}.Contains(System.Convert.ToString(x, System.Globalization.CultureInfo.InvariantCulture))"],
+                var enumValues = string.Join(", ", schema.Enum.Select(e => $"\"{e}\""));
+                rules.Add(new ValidationRule 
+                { 
+                    Rule = "Must", 
+                    Parameters = [$"x => new[] {{ {enumValues} }}.Contains(x.ToString())"],
                     Message = customMessage ?? $"Must be one of: {enumValues}"
                 });
             }
@@ -782,7 +753,7 @@ public class CodeGenerator
         }
 
         // Handle cases where Type might be null or empty
-        var schemaType = schema.Type?.ToLowerInvariant() ?? "object";
+        var schemaType = schema.Type?.ToLower() ?? "object";
         
         return schemaType switch
         {
@@ -810,7 +781,7 @@ public class CodeGenerator
         if (words.Length == 1)
         {
             // Single word - just capitalize first letter
-            return char.ToUpperInvariant(input[0]) + input.Substring(1);
+            return char.ToUpper(input[0]) + input.Substring(1);
         }
 
         var result = new StringBuilder();
@@ -818,9 +789,9 @@ public class CodeGenerator
         {
             if (word.Length > 0)
             {
-                result.Append(char.ToUpperInvariant(word[0]));
+                result.Append(char.ToUpper(word[0]));
                 if (word.Length > 1)
-                    result.Append(word.Substring(1).ToLowerInvariant());
+                    result.Append(word.Substring(1).ToLower());
             }
         }
 
@@ -829,13 +800,11 @@ public class CodeGenerator
 
     private string FormatDefaultValue(object value, string type)
     {
-        var invariantValue = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
-
-        return type.ToLowerInvariant() switch
+        return type.ToLower() switch
         {
-            "string" => $"\"{invariantValue}\"",
-            "bool" => string.IsNullOrEmpty(invariantValue) ? "false" : invariantValue.ToLowerInvariant(),
-            _ => invariantValue
+            "string" => $"\"{value}\"",
+            "bool" => value.ToString()?.ToLower() ?? "false",
+            _ => value.ToString() ?? ""
         };
     }
 
