@@ -37,6 +37,13 @@ public class PropertyInfo
     public bool UseSystemTextJson { get; set; }
     public bool UseEnhancedValidation { get; set; }
     public bool HasStringLength => MinLength.HasValue || MaxLength.HasValue;
+    
+    // Swashbuckle attributes support
+    public bool UseSwashbuckleAttributes { get; set; }
+    public string? SwaggerSchemaDescription { get; set; }
+    public string? SwaggerFormat { get; set; }
+    public string? SwaggerExample { get; set; }
+    public bool SwaggerNullable { get; set; }
 }
 
 /// <summary>

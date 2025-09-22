@@ -334,7 +334,8 @@ public class CodeGenerator
             ClassName = ApplyTypeNameFormatting(ToPascalCase(name)),
             Namespace = targetNamespace,
             Description = schema.Description ?? "",
-            UseSystemTextJson = _options.UseSystemTextJson
+            UseSystemTextJson = _options.UseSystemTextJson,
+            UseSwashbuckleAttributes = _options.UseSwashbuckleAttributes
         };
 
         // Apply configuration rule for class description override
@@ -432,7 +433,9 @@ public class CodeGenerator
                 UseRequiredKeyword = _options.UseRequiredKeyword && nullSchemaRequired,
                 ValidationRules = [],
                 UseSystemTextJson = _options.UseSystemTextJson,
-                UseEnhancedValidation = _options.UseSystemTextJson
+                UseEnhancedValidation = _options.UseSystemTextJson,
+                UseSwashbuckleAttributes = _options.UseSwashbuckleAttributes,
+                SwaggerNullable = nullSchemaNullable
             };
         }
 
@@ -458,7 +461,13 @@ public class CodeGenerator
             MultipleOf = schema.MultipleOf,
             EnumValues = schema.Enum ?? [],
             UseSystemTextJson = _options.UseSystemTextJson,
-            UseEnhancedValidation = _options.UseSystemTextJson
+            UseEnhancedValidation = _options.UseSystemTextJson,
+            // Swashbuckle attributes
+            UseSwashbuckleAttributes = _options.UseSwashbuckleAttributes,
+            SwaggerSchemaDescription = _options.UseSwashbuckleAttributes ? schema.Description : null,
+            SwaggerFormat = _options.UseSwashbuckleAttributes ? schema.Format : null,
+            SwaggerExample = _options.UseSwashbuckleAttributes && schema.Example != null ? FormatExampleValue(schema.Example) : null,
+            SwaggerNullable = isNullable
         };
 
         // Generate validation rules
@@ -498,7 +507,9 @@ public class CodeGenerator
                 UseRequiredKeyword = _options.UseRequiredKeyword && nullSchemaRequired2,
                 ValidationRules = [],
                 UseSystemTextJson = _options.UseSystemTextJson,
-                UseEnhancedValidation = _options.UseSystemTextJson
+                UseEnhancedValidation = _options.UseSystemTextJson,
+                UseSwashbuckleAttributes = _options.UseSwashbuckleAttributes,
+                SwaggerNullable = nullSchemaNullable2
             };
         }
 
@@ -523,7 +534,13 @@ public class CodeGenerator
             MultipleOf = schema.MultipleOf,
             EnumValues = schema.Enum ?? [],
             UseSystemTextJson = _options.UseSystemTextJson,
-            UseEnhancedValidation = _options.UseSystemTextJson
+            UseEnhancedValidation = _options.UseSystemTextJson,
+            // Swashbuckle attributes
+            UseSwashbuckleAttributes = _options.UseSwashbuckleAttributes,
+            SwaggerSchemaDescription = _options.UseSwashbuckleAttributes ? schema.Description : null,
+            SwaggerFormat = _options.UseSwashbuckleAttributes ? schema.Format : null,
+            SwaggerExample = _options.UseSwashbuckleAttributes && schema.Example != null ? FormatExampleValue(schema.Example) : null,
+            SwaggerNullable = isNullable
         };
 
         // Apply configuration rules
@@ -907,6 +924,30 @@ public class CodeGenerator
             "bool" => valueStr.ToLower(),
             _ => valueStr
         };
+    }
+
+    private string FormatExampleValue(object value)
+    {
+        if (value == null) return "null";
+        
+        var valueStr = Convert.ToString(value, CultureInfo.InvariantCulture) ?? "";
+        
+        // If it's already a JSON string (starts and ends with quotes), use as-is
+        if (valueStr.StartsWith("\"") && valueStr.EndsWith("\""))
+        {
+            return valueStr;
+        }
+        
+        // For numeric values, booleans, etc., use as-is
+        if (bool.TryParse(valueStr, out _) || 
+            decimal.TryParse(valueStr, out _) ||
+            valueStr == "null")
+        {
+            return valueStr.ToLower();
+        }
+        
+        // For everything else, treat as string and escape properly for C# string literals
+        return $"\"{valueStr.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"";
     }
 
     /// <summary>

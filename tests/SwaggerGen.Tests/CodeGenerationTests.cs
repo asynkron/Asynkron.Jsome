@@ -679,4 +679,284 @@ public class CodeGenerationTests
         Assert.Contains("public partial record Product(", productDto);
         Assert.DoesNotContain("public record Product(", productDto.Replace("public partial record Product(", ""));
     }
+
+    [Fact]
+    public void CodeGenerator_GeneratesSwashbuckleAttributes_WhenEnabled()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["User"] = new Schema
+                {
+                    Type = "object",
+                    Description = "A user entity",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["id"] = new Schema 
+                        { 
+                            Type = "integer",
+                            Format = "int64", 
+                            Description = "The unique identifier",
+                            Example = 12345
+                        },
+                        ["name"] = new Schema 
+                        { 
+                            Type = "string",
+                            Description = "The user's full name",
+                            Example = "John Doe"
+                        },
+                        ["email"] = new Schema 
+                        { 
+                            Type = "string",
+                            Format = "email",
+                            Description = "The user's email address",
+                            Example = "john.doe@example.com"
+                        },
+                        ["isActive"] = new Schema
+                        {
+                            Type = "boolean",
+                            Description = "Whether the user is active",
+                            Example = true
+                        }
+                    },
+                    Required = ["id", "name"]
+                }
+            }
+        };
+
+        var options = new CodeGenerationOptions { UseSwashbuckleAttributes = true };
+        var generator = new CodeGenerator(options);
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        Assert.Single(result.DtoClasses);
+        var userDto = result.DtoClasses["User"];
+        
+        // Verify Swashbuckle using statement
+        Assert.Contains("using Swashbuckle.AspNetCore.Annotations;", userDto);
+        
+        // Verify SwaggerSchema attributes with description and format
+        Assert.Contains("[SwaggerSchema(Description = \"The unique identifier\", Format = \"int64\")]", userDto);
+        Assert.Contains("[SwaggerSchema(Description = \"The user's full name\")]", userDto);
+        Assert.Contains("[SwaggerSchema(Description = \"The user's email address\", Format = \"email\")]", userDto);
+        Assert.Contains("[SwaggerSchema(Description = \"Whether the user is active\")]", userDto);
+        
+        // Verify SwaggerExampleValue attributes
+        Assert.Contains("[SwaggerExampleValue(12345)]", userDto);
+        Assert.Contains("[SwaggerExampleValue(\"John Doe\")]", userDto);
+        Assert.Contains("[SwaggerExampleValue(\"john.doe@example.com\")]", userDto);
+        Assert.Contains("[SwaggerExampleValue(true)]", userDto);
+        
+        // Verify DataAnnotations are still present
+        Assert.Contains("[Required]", userDto);
+        Assert.Contains("[JsonProperty(\"id\")]", userDto);
+        Assert.Contains("[JsonProperty(\"name\")]", userDto);
+    }
+
+    [Fact]
+    public void CodeGenerator_DoesNotGenerateSwashbuckleAttributes_WhenDisabled()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["User"] = new Schema
+                {
+                    Type = "object",
+                    Description = "A user entity",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["id"] = new Schema 
+                        { 
+                            Type = "integer",
+                            Format = "int64", 
+                            Description = "The unique identifier",
+                            Example = 12345
+                        },
+                        ["name"] = new Schema 
+                        { 
+                            Type = "string",
+                            Description = "The user's full name",
+                            Example = "John Doe"
+                        }
+                    },
+                    Required = ["id", "name"]
+                }
+            }
+        };
+
+        var options = new CodeGenerationOptions { UseSwashbuckleAttributes = false };
+        var generator = new CodeGenerator(options);
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        Assert.Single(result.DtoClasses);
+        var userDto = result.DtoClasses["User"];
+        
+        // Verify Swashbuckle using statement is NOT present
+        Assert.DoesNotContain("using Swashbuckle.AspNetCore.Annotations;", userDto);
+        
+        // Verify SwaggerSchema attributes are NOT present
+        Assert.DoesNotContain("SwaggerSchema", userDto);
+        Assert.DoesNotContain("SwaggerExampleValue", userDto);
+        
+        // Verify DataAnnotations are still present
+        Assert.Contains("[Required]", userDto);
+        Assert.Contains("[JsonProperty(\"id\")]", userDto);
+        Assert.Contains("[JsonProperty(\"name\")]", userDto);
+    }
+
+    [Fact]
+    public void CodeGenerator_GeneratesSwashbuckleAttributes_WithFormatOnly()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["Product"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["price"] = new Schema 
+                        { 
+                            Type = "number",
+                            Format = "decimal"
+                        },
+                        ["code"] = new Schema 
+                        { 
+                            Type = "string",
+                            Format = "uuid"
+                        }
+                    }
+                }
+            }
+        };
+
+        var options = new CodeGenerationOptions { UseSwashbuckleAttributes = true };
+        var generator = new CodeGenerator(options);
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        var productDto = result.DtoClasses["Product"];
+        
+        // Verify SwaggerSchema attributes with format only (no description)
+        Assert.Contains("[SwaggerSchema(Format = \"decimal\")]", productDto);
+        Assert.Contains("[SwaggerSchema(Format = \"uuid\")]", productDto);
+    }
+
+    [Fact]  
+    public void CodeGenerator_GeneratesSwashbuckleAttributes_WithExampleOnly()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["TestData"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["score"] = new Schema 
+                        { 
+                            Type = "number",
+                            Example = 95.5
+                        },
+                        ["category"] = new Schema 
+                        { 
+                            Type = "string",
+                            Example = "premium"
+                        },
+                        ["enabled"] = new Schema
+                        {
+                            Type = "boolean",
+                            Example = false
+                        }
+                    }
+                }
+            }
+        };
+
+        var options = new CodeGenerationOptions { UseSwashbuckleAttributes = true };
+        var generator = new CodeGenerator(options);
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        var testDataDto = result.DtoClasses["TestData"];
+        
+        // Verify SwaggerExampleValue attributes with different types
+        Assert.Contains("[SwaggerExampleValue(95.5)]", testDataDto);
+        Assert.Contains("[SwaggerExampleValue(\"premium\")]", testDataDto);
+        Assert.Contains("[SwaggerExampleValue(false)]", testDataDto);
+    }
+
+    [Fact]
+    public void CodeGenerator_GeneratesSwashbuckleAttributes_WithSystemTextJson()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["User"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["id"] = new Schema 
+                        { 
+                            Type = "integer",
+                            Description = "User ID",
+                            Example = 123
+                        },
+                        ["name"] = new Schema 
+                        { 
+                            Type = "string",
+                            Description = "User name",
+                            Example = "John"
+                        }
+                    },
+                    Required = ["id"]
+                }
+            }
+        };
+
+        var options = new CodeGenerationOptions 
+        { 
+            UseSwashbuckleAttributes = true,
+            UseSystemTextJson = true 
+        };
+        var generator = new CodeGenerator(options);
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        var userDto = result.DtoClasses["User"];
+        
+        // Verify both System.Text.Json and Swashbuckle using statements
+        Assert.Contains("using System.Text.Json.Serialization;", userDto);
+        Assert.Contains("using Swashbuckle.AspNetCore.Annotations;", userDto);
+        
+        // Verify System.Text.Json attributes
+        Assert.Contains("[JsonPropertyName(\"id\")]", userDto);
+        Assert.DoesNotContain("[JsonProperty(\"id\")]", userDto);
+        
+        // Verify Swashbuckle attributes are still present
+        Assert.Contains("[SwaggerSchema(Description = \"User ID\")]", userDto);
+        Assert.Contains("[SwaggerExampleValue(123)]", userDto);
+    }
 }

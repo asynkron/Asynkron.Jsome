@@ -5,6 +5,9 @@ using System.Text.Json.Serialization;
 {{else}}
 using Newtonsoft.Json;
 {{/if}}
+{{#if UseSwashbuckleAttributes}}
+using Swashbuckle.AspNetCore.Annotations;
+{{/if}}
 
 namespace {{Namespace}};
 
@@ -53,6 +56,18 @@ public partial class {{ClassName}}
     {{/if}}
     {{#if MinLength}}
     [MinLength({{MinLength}})]
+    {{/if}}
+    {{/if}}
+    {{#if UseSwashbuckleAttributes}}
+    {{#if SwaggerSchemaDescription}}
+    [SwaggerSchema(Description = "{{SwaggerSchemaDescription}}"{{#if SwaggerFormat}}, Format = "{{SwaggerFormat}}"{{/if}})]
+    {{else}}
+    {{#if SwaggerFormat}}
+    [SwaggerSchema(Format = "{{SwaggerFormat}}")]
+    {{/if}}
+    {{/if}}
+    {{#if SwaggerExample}}
+    [SwaggerExampleValue({{{SwaggerExample}}})]
     {{/if}}
     {{/if}}
     public {{#if UseRequiredKeyword}}required {{/if}}{{{Type}}} {{Name}} { get; set; }{{#if DefaultValue}} = {{DefaultValue}};{{/if}}
