@@ -3,6 +3,46 @@ using Newtonsoft.Json;
 namespace SwaggerGen.Models;
 
 /// <summary>
+/// Custom converter to handle additionalProperties that can be either boolean or Schema object
+/// </summary>
+public class AdditionalPropertiesConverter : JsonConverter<Schema?>
+{
+    public override void WriteJson(JsonWriter writer, Schema? value, JsonSerializer serializer)
+    {
+        if (value == null)
+        {
+            writer.WriteNull();
+        }
+        else
+        {
+            serializer.Serialize(writer, value);
+        }
+    }
+
+    public override Schema? ReadJson(JsonReader reader, Type objectType, Schema? existingValue, bool hasExistingValue, JsonSerializer serializer)
+    {
+        if (reader.TokenType == JsonToken.Boolean)
+        {
+            // If it's a boolean false, we treat it as no additional properties allowed
+            // If it's a boolean true, we treat it as any additional properties allowed (empty schema)
+            var boolValue = (bool)reader.Value!;
+            return boolValue ? new Schema() : null;
+        }
+        else if (reader.TokenType == JsonToken.StartObject)
+        {
+            // If it's an object, deserialize it as a Schema
+            return serializer.Deserialize<Schema>(reader);
+        }
+        else if (reader.TokenType == JsonToken.Null)
+        {
+            return null;
+        }
+        
+        throw new JsonSerializationException($"Unexpected token type {reader.TokenType} for additionalProperties");
+    }
+}
+
+/// <summary>
 /// Allows the definition of input and output data types
 /// </summary>
 public class Schema
@@ -80,6 +120,7 @@ public class Schema
     public Dictionary<string, Schema> Properties { get; set; } = new();
 
     [JsonProperty("additionalProperties")]
+    [JsonConverter(typeof(AdditionalPropertiesConverter))]
     public Schema? AdditionalProperties { get; set; }
 
     [JsonProperty("discriminator")]
