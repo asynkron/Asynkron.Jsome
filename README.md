@@ -1,14 +1,15 @@
 # SwaggerGen
 
-A C# code generator that processes Swagger 2.0 JSON files to produce C# DTO (Data Transfer Object) classes and FluentValidation validators. The project focuses on generating clean, type-safe C# code from OpenAPI/Swagger specifications with powerful configuration options for controlling the object graph generation.
+A C# code generator that processes Swagger 2.0 JSON files and JSON Schema directories to produce C# DTO (Data Transfer Object) classes and FluentValidation validators. The project focuses on generating clean, type-safe C# code from OpenAPI/Swagger specifications and vanilla JSON Schemas with powerful configuration options for controlling the object graph generation.
 
 ## Features
 
 - ✅ **Swagger 2.0 Support**: Full support for Swagger 2.0 JSON specifications
+- 🆕 **JSON Schema Directory Support**: Generate DTOs from multiple JSON Schema files in a directory
 - ✅ **DTO Generation**: Creates C# classes with proper property mapping and attributes
 - ✅ **FluentValidation**: Generates validators based on Swagger validation rules
-- ✅ **Complex Schema Support**: Handles large, complex schemas (tested with Stripe's API)
-- ✅ **Reference Resolution**: Properly resolves `$ref` properties to their correct types
+- ✅ **Complex Schema Support**: Handles large, complex schemas (tested with Stripe's API and OCPP 1.6)
+- ✅ **Reference Resolution**: Properly resolves `$ref` properties to their correct types across multiple files
 - ✅ **Inheritance Support**: Handles `allOf` for schema inheritance
 - ✅ **Validation Rules**: Converts Swagger constraints to FluentValidation rules
 - ⭐ **Unified Modifier Configuration**: Control object graph generation via YAML or JSON configuration files
@@ -20,6 +21,7 @@ A C# code generator that processes Swagger 2.0 JSON files to produce C# DTO (Dat
 - 🆕 **Modern C# Features**: Support for nullable reference types (`string?`) and `required` keyword
 - 🆕 **C# Records Support**: Generate immutable records instead of mutable classes
 - 🆕 **Multiple DTO Styles**: Choose between traditional classes, modern classes, and records
+- 🆕 **Vanilla JSON Schema Compatibility**: Support boolean `additionalProperties` and JSON Schema Draft 4+ features
 
 ## Installation
 
@@ -63,18 +65,68 @@ swaggergen /path/to/swagger.json
 swaggergen https://petstore.swagger.io/v2/swagger.json
 ```
 
+#### With JSON Schema Directory (New!)
+
+SwaggerGen now supports generating DTOs from multiple JSON Schema files in a directory, perfect for vanilla JSON Schema compatibility (such as OCPP 1.6):
+
+```bash
+# Generate from all JSON Schema files in a directory
+swaggergen generate --schema-dir /path/to/schemas
+
+# With custom namespace and output directory
+swaggergen generate --schema-dir ./schemas --namespace MyProject.Generated --output ./generated
+
+# Real-world example with OCPP 1.6 schemas
+swaggergen generate --schema-dir ./schemas/ocppv16/json_schemas --namespace OCPP.V16.Generated --output ./src/Generated
+```
+
 #### Command Line Options
 
 ```
-Usage: swaggergen [swagger-file-path]
-  swagger-file-path: Path to a Swagger 2.0 JSON file (optional)
+Usage: swaggergen generate [options] [swagger-file-path]
+
+Arguments:
+  swagger-file-path                     Path to a Swagger 2.0 JSON file (optional)
+
+Options:
+  -s, --schema-dir <schema-dir>         Directory containing multiple JSON Schema files to process
+  -c, --config <config>                 Path to YAML or JSON configuration file 
+  -n, --namespace <namespace>           Override the default namespace for generated code
+  -o, --output <output>                 Output directory for generated files
+  -y, --yes                            Skip confirmation prompts 
+  -t, --template-dir <template-dir>     Custom directory containing Handlebars template files
+  -m, --modern                         Enable modern C# features (nullable types, required keyword)
+  --records                            Generate C# records instead of classes for DTOs
+  -h, --help                           Show help information
 
 Examples:
-  swaggergen
-  swaggergen petstore-swagger.json
-  swaggergen /path/to/my-api.json
-  swaggergen https://api.example.com/swagger.json
+  swaggergen generate
+  swaggergen generate petstore-swagger.json
+  swaggergen generate /path/to/my-api.json
+  swaggergen generate --schema-dir ./json-schemas --namespace MyApi.Generated
+  swaggergen generate --config config.yaml --output ./generated --modern
 ```
+
+### JSON Schema Directory Features
+
+The `--schema-dir` option provides powerful support for vanilla JSON Schema files:
+
+- **Multiple File Processing**: Automatically loads and processes all `.json` files in the specified directory
+- **Schema Merging**: Combines multiple schemas into a unified model for DTO generation
+- **Internal Definitions**: Extracts and merges definitions from within individual schema files  
+- **Conflict Detection**: Detects and reports conflicting type definitions across files
+- **Cross-Reference Resolution**: Resolves `$ref` references across multiple schema files
+- **JSON Schema Compatibility**: Supports vanilla JSON Schema features like boolean `additionalProperties`
+- **Deduplication**: Automatically deduplicates identical type definitions by name
+
+#### Limitations and Caveats
+
+When using `--schema-dir` with vanilla JSON Schema files:
+
+- Only JSON Schema Draft 4+ features commonly supported by Swagger are fully supported
+- Complex JSON Schema features like `anyOf`, `oneOf`, and advanced conditionals may not be fully supported
+- Schema titles are used as type names when available, otherwise filenames are used
+- All schemas are merged into a single namespace - use prefixes in schema titles to avoid conflicts
 
 ## Development
 
