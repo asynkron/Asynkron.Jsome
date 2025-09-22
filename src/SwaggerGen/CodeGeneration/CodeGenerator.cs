@@ -776,7 +776,7 @@ public class CodeGenerator
         if (char.IsUpper(input[0]))
             return input;
 
-        var words = input.Split(['_', '-', ' '], StringSplitOptions.RemoveEmptyEntries);
+        var words = input.Split(new char[] { '_', '-', ' ' }, StringSplitOptions.RemoveEmptyEntries);
         
         if (words.Length == 1)
         {
