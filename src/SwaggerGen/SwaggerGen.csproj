@@ -18,6 +18,7 @@
     <RepositoryUrl>https://github.com/asynkron/SwaggerGen</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <Authors>asynkron</Authors>
     <Company>asynkron</Company>
   </PropertyGroup>
@@ -33,6 +34,7 @@
 
   <ItemGroup>
     <None Include="Templates\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
