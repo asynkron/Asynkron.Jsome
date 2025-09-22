@@ -75,6 +75,10 @@ class Program
             aliases: new[] { "--records" },
             description: "Generate C# records instead of classes for DTOs");
 
+        var useSystemTextJsonOption = new Option<bool>(
+            aliases: new[] { "--system-text-json" },
+            description: "Use System.Text.Json attributes and enhanced validation (JsonPropertyName, JsonIgnore conditions, Required(AllowEmptyStrings = false), StringLength)");
+
         var schemaDirOption = new Option<DirectoryInfo?>(
             aliases: new[] { "--schema-dir", "-s" },
             description: "Directory containing multiple JSON Schema files to process instead of a single Swagger file");
@@ -89,6 +93,7 @@ class Program
             templateDirOption,
             modernFeaturesOption,
             generateRecordsOption,
+            useSystemTextJsonOption,
             schemaDirOption
         };
 
@@ -102,9 +107,10 @@ class Program
             var templateDir = context.ParseResult.GetValueForOption(templateDirOption);
             var useModern = context.ParseResult.GetValueForOption(modernFeaturesOption);
             var generateRecords = context.ParseResult.GetValueForOption(generateRecordsOption);
+            var useSystemTextJson = context.ParseResult.GetValueForOption(useSystemTextJsonOption);
             var schemaDir = context.ParseResult.GetValueForOption(schemaDirOption);
             
-            await HandleGenerateCommand(swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir, useModern, generateRecords, schemaDir);
+            await HandleGenerateCommand(swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir, useModern, generateRecords, useSystemTextJson, schemaDir);
         });
 
         return generateCommand;
@@ -122,7 +128,7 @@ class Program
         return helpCommand;
     }
 
-    private static async Task HandleGenerateCommand(FileInfo? swaggerFile, FileInfo? configFile, string? namespaceOverride, DirectoryInfo? outputDir, bool skipConfirmation, DirectoryInfo? templateDir, bool useModern, bool generateRecords, DirectoryInfo? schemaDir)
+    private static async Task HandleGenerateCommand(FileInfo? swaggerFile, FileInfo? configFile, string? namespaceOverride, DirectoryInfo? outputDir, bool skipConfirmation, DirectoryInfo? templateDir, bool useModern, bool generateRecords, bool useSystemTextJson, DirectoryInfo? schemaDir)
     {
         try
         {
@@ -163,7 +169,7 @@ class Program
             }
 
             // Generate code
-            await GenerateCode(document, config, namespaceOverride, outputDir, templateDir, useModern, generateRecords);
+            await GenerateCode(document, config, namespaceOverride, outputDir, templateDir, useModern, generateRecords, useSystemTextJson);
 
             AnsiConsole.MarkupLine("[green]✓ Code generation completed successfully![/]");
         }
@@ -395,7 +401,7 @@ class Program
         AnsiConsole.WriteLine();
     }
 
-    private static async Task GenerateCode(SwaggerDocument document, ModifierConfiguration? config, string? namespaceOverride, DirectoryInfo? outputDir, DirectoryInfo? templateDir, bool useModern, bool generateRecords)
+    private static async Task GenerateCode(SwaggerDocument document, ModifierConfiguration? config, string? namespaceOverride, DirectoryInfo? outputDir, DirectoryInfo? templateDir, bool useModern, bool generateRecords, bool useSystemTextJson)
     {
         AnsiConsole.MarkupLine("[green]⚙️  Generating C# code...[/]");
         
@@ -404,7 +410,8 @@ class Program
         {
             UseNullableReferenceTypes = useModern,
             UseRequiredKeyword = useModern,
-            GenerateRecords = generateRecords
+            GenerateRecords = generateRecords,
+            UseSystemTextJson = useSystemTextJson
         };
         
         if (config != null)
