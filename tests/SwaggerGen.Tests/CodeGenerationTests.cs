@@ -39,7 +39,7 @@ public class CodeGenerationTests
         Assert.True(result.DtoClasses.ContainsKey("User"));
         
         var userDto = result.DtoClasses["User"];
-        Assert.Contains("public class User", userDto);
+        Assert.Contains("public partial class User", userDto);
         Assert.Contains("namespace Test.Generated", userDto);
         Assert.Contains("public int Id { get; set; }", userDto);
         Assert.Contains("public string Name { get; set; }", userDto);
@@ -605,5 +605,78 @@ public class CodeGenerationTests
         Assert.Contains("VALUE_WITH_DASH", constantsCode);
         Assert.Contains("VALUE_WITH_UNDERSCORE", constantsCode);
         Assert.Contains("VALUE_123_NUMERIC", constantsCode);
+    }
+
+    [Fact]
+    public void CodeGenerator_GeneratesPartialClasses_ForExtensibility()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["Customer"] = new Schema
+                {
+                    Type = "object",
+                    Description = "A customer object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["id"] = new Schema { Type = "string" },
+                        ["name"] = new Schema { Type = "string" },
+                    },
+                    Required = ["name"]
+                }
+            }
+        };
+
+        var generator = new CodeGenerator();
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        Assert.Single(result.DtoClasses);
+        var customerDto = result.DtoClasses["Customer"];
+        
+        // Verify it's a partial class to allow user extensions
+        Assert.Contains("public partial class Customer", customerDto);
+        Assert.DoesNotContain("public class Customer", customerDto.Replace("public partial class Customer", ""));
+    }
+
+    [Fact]
+    public void CodeGenerator_GeneratesPartialRecords_ForExtensibility()
+    {
+        // Arrange
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["Product"] = new Schema
+                {
+                    Type = "object",
+                    Description = "A product object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["id"] = new Schema { Type = "string" },
+                        ["name"] = new Schema { Type = "string" },
+                    },
+                    Required = ["name"]
+                }
+            }
+        };
+
+        var options = new CodeGenerationOptions { GenerateRecords = true };
+        var generator = new CodeGenerator(options);
+
+        // Act
+        var result = generator.GenerateCode(document, "Test.Generated");
+
+        // Assert
+        Assert.Single(result.DtoClasses);
+        var productDto = result.DtoClasses["Product"];
+        
+        // Verify it's a partial record to allow user extensions
+        Assert.Contains("public partial record Product(", productDto);
+        Assert.DoesNotContain("public record Product(", productDto.Replace("public partial record Product(", ""));
     }
 }
