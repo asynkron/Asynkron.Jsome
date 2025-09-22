@@ -74,6 +74,10 @@ class Program
         var generateRecordsOption = new Option<bool>(
             aliases: new[] { "--records" },
             description: "Generate C# records instead of classes for DTOs");
+
+        var schemaDirOption = new Option<DirectoryInfo?>(
+            aliases: new[] { "--schema-dir", "-s" },
+            description: "Directory containing multiple JSON Schema files to process instead of a single Swagger file");
             
         var generateCommand = new Command("generate", "Generate C# code from a Swagger specification")
         {
@@ -84,13 +88,24 @@ class Program
             yesOption,
             templateDirOption,
             modernFeaturesOption,
-            generateRecordsOption
+            generateRecordsOption,
+            schemaDirOption
         };
 
-        generateCommand.SetHandler(async (swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir, useModern, generateRecords) =>
+        generateCommand.SetHandler(async (context) =>
         {
-            await HandleGenerateCommand(swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir, useModern, generateRecords);
-        }, swaggerFileArgument, configOption, namespaceOption, outputOption, yesOption, templateDirOption, modernFeaturesOption, generateRecordsOption);
+            var swaggerFile = context.ParseResult.GetValueForArgument(swaggerFileArgument);
+            var configFile = context.ParseResult.GetValueForOption(configOption);
+            var namespaceOverride = context.ParseResult.GetValueForOption(namespaceOption);
+            var outputDir = context.ParseResult.GetValueForOption(outputOption);
+            var skipConfirmation = context.ParseResult.GetValueForOption(yesOption);
+            var templateDir = context.ParseResult.GetValueForOption(templateDirOption);
+            var useModern = context.ParseResult.GetValueForOption(modernFeaturesOption);
+            var generateRecords = context.ParseResult.GetValueForOption(generateRecordsOption);
+            var schemaDir = context.ParseResult.GetValueForOption(schemaDirOption);
+            
+            await HandleGenerateCommand(swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir, useModern, generateRecords, schemaDir);
+        });
 
         return generateCommand;
     }
@@ -107,12 +122,32 @@ class Program
         return helpCommand;
     }
 
-    private static async Task HandleGenerateCommand(FileInfo? swaggerFile, FileInfo? configFile, string? namespaceOverride, DirectoryInfo? outputDir, bool skipConfirmation, DirectoryInfo? templateDir, bool useModern, bool generateRecords)
+    private static async Task HandleGenerateCommand(FileInfo? swaggerFile, FileInfo? configFile, string? namespaceOverride, DirectoryInfo? outputDir, bool skipConfirmation, DirectoryInfo? templateDir, bool useModern, bool generateRecords, DirectoryInfo? schemaDir)
     {
         try
         {
-            // Determine swagger file path
-            string swaggerFilePath = await DetermineSwaggerFilePath(swaggerFile);
+            SwaggerDocument document;
+
+            // Validate that either swaggerFile or schemaDir is provided, but not both
+            if (swaggerFile != null && schemaDir != null)
+            {
+                throw new InvalidOperationException("Cannot specify both a Swagger file and a schema directory. Please use either --swagger-file or --schema-dir, but not both.");
+            }
+
+            if (schemaDir != null)
+            {
+                // Generate from JSON Schema directory
+                AnsiConsole.MarkupLine($"[blue]📁 Loading JSON Schema files from directory:[/] [yellow]{schemaDir.FullName}[/]");
+                document = JsonSchemaParser.ParseDirectory(schemaDir.FullName);
+                DisplayJsonSchemaSummary(document, schemaDir.FullName);
+            }
+            else
+            {
+                // Generate from single Swagger file (existing behavior)
+                string swaggerFilePath = await DetermineSwaggerFilePath(swaggerFile);
+                document = await LoadSwaggerDocument(swaggerFilePath);
+                DisplaySwaggerSummary(document);
+            }
 
             // Load configuration if provided
             ModifierConfiguration? config = null;
@@ -120,9 +155,6 @@ class Program
             {
                 config = await LoadAndDisplayConfiguration(configFile, skipConfirmation);
             }
-
-            // Parse the Swagger document
-            SwaggerDocument document = await LoadSwaggerDocument(swaggerFilePath);
 
             // Validate configuration against schema if both are provided
             if (config != null)
@@ -298,6 +330,35 @@ class Program
             Header = new PanelHeader("[bold]Swagger Document Summary[/]"),
             Border = BoxBorder.Rounded,
             BorderStyle = Style.Parse("cyan")
+        };
+        
+        AnsiConsole.Write(panel);
+        AnsiConsole.WriteLine();
+    }
+
+    private static void DisplayJsonSchemaSummary(SwaggerDocument document, string directoryPath)
+    {
+        var table = new Table();
+        table.AddColumn("[bold]Property[/]");
+        table.AddColumn("[bold]Value[/]");
+
+        table.AddRow("Source Directory", directoryPath);
+        table.AddRow("Generated Title", document.Info.Title);
+        table.AddRow("Generated Version", document.Info.Version);
+        table.AddRow("Schema Count", Convert.ToString(document.Definitions.Count, CultureInfo.InvariantCulture));
+        
+        // Show some example schema names
+        var schemaNames = document.Definitions.Keys.Take(5).ToList();
+        if (schemaNames.Any())
+        {
+            table.AddRow("Sample Schemas", string.Join(", ", schemaNames) + (document.Definitions.Count > 5 ? "..." : ""));
+        }
+
+        var panel = new Panel(table)
+        {
+            Header = new PanelHeader("[bold]JSON Schema Directory Summary[/]"),
+            Border = BoxBorder.Rounded,
+            BorderStyle = Style.Parse("green")
         };
         
         AnsiConsole.Write(panel);
@@ -501,6 +562,12 @@ class Program
             "[cyan]swaggergen generate --template-dir <dir>[/]",
             "Use custom template directory",
             "[dim]swaggergen generate --template-dir ./my-templates[/]"
+        );
+
+        helpTable.AddRow(
+            "[cyan]swaggergen generate --schema-dir <dir>[/]",
+            "Generate from JSON Schema directory",
+            "[dim]swaggergen generate --schema-dir ./schemas[/]"
         );
 
         var panel = new Panel(helpTable)
