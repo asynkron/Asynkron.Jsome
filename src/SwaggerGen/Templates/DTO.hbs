@@ -14,6 +14,11 @@ namespace {{Namespace}};
 /// <summary>
 /// {{Description}}
 /// </summary>
+{{#if UseSwashbuckleAttributes}}
+{{#if Description}}
+[SwaggerSchema(Description = "{{Description}}")]
+{{/if}}
+{{/if}}
 public partial class {{ClassName}}
 {
 {{#each Properties}}
