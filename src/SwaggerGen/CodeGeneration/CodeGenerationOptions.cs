@@ -51,4 +51,11 @@ public class CodeGenerationOptions
     /// Default: false (for backward compatibility)
     /// </summary>
     public bool GenerateRecords { get; set; } = false;
+
+    /// <summary>
+    /// When true, uses System.Text.Json attributes (JsonPropertyName, JsonIgnore) instead of Newtonsoft.Json.
+    /// Also generates enhanced validation attributes like Required(AllowEmptyStrings = false) and StringLength.
+    /// Default: false (for backward compatibility with Newtonsoft.Json)
+    /// </summary>
+    public bool UseSystemTextJson { get; set; } = false;
 }

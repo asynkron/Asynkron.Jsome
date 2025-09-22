@@ -1,6 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
+{{#if UseSystemTextJson}}
+using System.Text.Json.Serialization;
+{{else}}
 using Newtonsoft.Json;
+{{/if}}
 
 namespace {{Namespace}};
 
@@ -17,18 +21,39 @@ public partial class {{ClassName}}
 {{/if}}{{#if EnumValues}}    /// Allowed values: {{#each EnumValues}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 {{/if}}    /// </summary>
     {{#if JsonPropertyName}}
+    {{#if UseSystemTextJson}}
+    [JsonPropertyName("{{JsonPropertyName}}")]
+    {{else}}
     [JsonProperty("{{JsonPropertyName}}")]
+    {{/if}}
+    {{/if}}
+    {{#if UseSystemTextJson}}
+    {{#if IsRequired}}
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    {{else}}
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    {{/if}}
     {{/if}}
     {{#if IsRequired}}
     {{#unless UseRequiredKeyword}}
+    {{#if UseEnhancedValidation}}
+    [Required(AllowEmptyStrings = false)]
+    {{else}}
     [Required]
+    {{/if}}
     {{/unless}}
     {{/if}}
+    {{#if UseEnhancedValidation}}
+    {{#if HasStringLength}}
+    [StringLength({{#if MaxLength}}{{MaxLength}}{{else}}int.MaxValue{{/if}}{{#if MinLength}}, MinimumLength = {{MinLength}}{{/if}})]
+    {{/if}}
+    {{else}}
     {{#if MaxLength}}
     [MaxLength({{MaxLength}})]
     {{/if}}
     {{#if MinLength}}
     [MinLength({{MinLength}})]
+    {{/if}}
     {{/if}}
     public {{#if UseRequiredKeyword}}required {{/if}}{{{Type}}} {{Name}} { get; set; }{{#if DefaultValue}} = {{DefaultValue}};{{/if}}
 

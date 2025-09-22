@@ -9,4 +9,5 @@ public class ClassInfo
     public string Namespace { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public List<PropertyInfo> Properties { get; set; } = [];
+    public bool UseSystemTextJson { get; set; }
 }

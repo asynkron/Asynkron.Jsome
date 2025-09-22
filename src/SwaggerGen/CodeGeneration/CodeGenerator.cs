@@ -333,7 +333,8 @@ public class CodeGenerator
         {
             ClassName = ApplyTypeNameFormatting(ToPascalCase(name)),
             Namespace = targetNamespace,
-            Description = schema.Description ?? ""
+            Description = schema.Description ?? "",
+            UseSystemTextJson = _options.UseSystemTextJson
         };
 
         // Apply configuration rule for class description override
@@ -429,7 +430,9 @@ public class CodeGenerator
                 IsRequired = nullSchemaRequired,
                 IsNullable = nullSchemaNullable,
                 UseRequiredKeyword = _options.UseRequiredKeyword && nullSchemaRequired,
-                ValidationRules = []
+                ValidationRules = [],
+                UseSystemTextJson = _options.UseSystemTextJson,
+                UseEnhancedValidation = _options.UseSystemTextJson
             };
         }
 
@@ -453,7 +456,9 @@ public class CodeGenerator
             MaxProperties = schema.MaxProperties,
             MinProperties = schema.MinProperties,
             MultipleOf = schema.MultipleOf,
-            EnumValues = schema.Enum ?? []
+            EnumValues = schema.Enum ?? [],
+            UseSystemTextJson = _options.UseSystemTextJson,
+            UseEnhancedValidation = _options.UseSystemTextJson
         };
 
         // Generate validation rules
@@ -491,7 +496,9 @@ public class CodeGenerator
                 IsRequired = nullSchemaRequired2,
                 IsNullable = nullSchemaNullable2,
                 UseRequiredKeyword = _options.UseRequiredKeyword && nullSchemaRequired2,
-                ValidationRules = []
+                ValidationRules = [],
+                UseSystemTextJson = _options.UseSystemTextJson,
+                UseEnhancedValidation = _options.UseSystemTextJson
             };
         }
 
@@ -514,7 +521,9 @@ public class CodeGenerator
             MaxProperties = schema.MaxProperties,
             MinProperties = schema.MinProperties,
             MultipleOf = schema.MultipleOf,
-            EnumValues = schema.Enum ?? []
+            EnumValues = schema.Enum ?? [],
+            UseSystemTextJson = _options.UseSystemTextJson,
+            UseEnhancedValidation = _options.UseSystemTextJson
         };
 
         // Apply configuration rules

@@ -1,11 +1,18 @@
 using System.ComponentModel.DataAnnotations;
+{{#if UseSystemTextJson}}
+using System.Text.Json.Serialization;
+{{else}}
 using Newtonsoft.Json;
+{{/if}}
 
 namespace {{Namespace}};
 
 /// <summary>
 /// {{Description}}
 /// </summary>
+{{#if UseSystemTextJson}}
+[method: JsonConstructor]
+{{/if}}
 public partial record {{ClassName}}(
 {{#each Properties}}
     /// <summary>
@@ -15,18 +22,51 @@ public partial record {{ClassName}}(
 {{/if}}{{#if EnumValues}}    /// Allowed values: {{#each EnumValues}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
 {{/if}}    /// </summary>
     {{#if JsonPropertyName}}
+    {{#if UseSystemTextJson}}
+    [property: JsonPropertyName("{{JsonPropertyName}}")]
+    {{else}}
     [JsonProperty("{{JsonPropertyName}}")]
+    {{/if}}
+    {{/if}}
+    {{#if UseSystemTextJson}}
+    {{#if IsRequired}}
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    {{else}}
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    {{/if}}
     {{/if}}
     {{#if IsRequired}}
     {{#unless UseRequiredKeyword}}
+    {{#if UseEnhancedValidation}}
+    [property: Required(AllowEmptyStrings = false)]
+    {{else}}
+    {{#if UseSystemTextJson}}
+    [property: Required]
+    {{else}}
     [Required]
+    {{/if}}
+    {{/if}}
     {{/unless}}
     {{/if}}
+    {{#if UseEnhancedValidation}}
+    {{#if HasStringLength}}
+    [property: StringLength({{#if MaxLength}}{{MaxLength}}{{else}}int.MaxValue{{/if}}{{#if MinLength}}, MinimumLength = {{MinLength}}{{/if}})]
+    {{/if}}
+    {{else}}
     {{#if MaxLength}}
+    {{#if UseSystemTextJson}}
+    [property: MaxLength({{MaxLength}})]
+    {{else}}
     [MaxLength({{MaxLength}})]
     {{/if}}
+    {{/if}}
     {{#if MinLength}}
+    {{#if UseSystemTextJson}}
+    [property: MinLength({{MinLength}})]
+    {{else}}
     [MinLength({{MinLength}})]
+    {{/if}}
+    {{/if}}
     {{/if}}
     {{#if UseRequiredKeyword}}required {{/if}}{{{Type}}} {{Name}}{{#if DefaultValue}} = {{DefaultValue}}{{/if}}{{#unless @last}},{{/unless}}
 {{/each}}

@@ -32,6 +32,11 @@ public class PropertyInfo
     // Modern C# features
     public bool IsNullable { get; set; }
     public bool UseRequiredKeyword { get; set; }
+    
+    // System.Text.Json and enhanced validation features
+    public bool UseSystemTextJson { get; set; }
+    public bool UseEnhancedValidation { get; set; }
+    public bool HasStringLength => MinLength.HasValue || MaxLength.HasValue;
 }
 
 /// <summary>
