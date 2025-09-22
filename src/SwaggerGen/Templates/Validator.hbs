@@ -13,7 +13,7 @@ public class {{ClassName}}Validator : AbstractValidator<{{ClassName}}>
 {{#if ValidationRules}}
         RuleFor(x => x.{{Name}})
 {{#each ValidationRules}}
-            .{{Rule}}{{#if Parameters}}({{#each Parameters}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}){{/if}}{{#if Message}}.WithMessage("{{Message}}"){{/if}}
+            .{{Rule}}{{#if Parameters}}({{#each Parameters}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}){{/if}}{{#if Message}}.WithMessage("{{{Message}}}"){{/if}}
 {{/each}}
             ;
 {{/if}}

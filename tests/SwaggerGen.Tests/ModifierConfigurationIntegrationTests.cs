@@ -99,7 +99,7 @@ public class ModifierConfigurationIntegrationTests
         // Assert
         var productValidator = result.Validators["Product"];
         Assert.Contains("MaximumLength(100)", productValidator);
-        Assert.Contains("&quot;^[A-Za-z0-9\\s]+$&quot;", productValidator); // HTML encoded in template output
+        Assert.Contains(@"@""^[A-Za-z0-9\s]+$""", productValidator); // Properly formatted pattern string
         Assert.Contains("Product name must contain only alphanumeric characters and spaces", productValidator);
     }
 
@@ -269,8 +269,8 @@ public class ModifierConfigurationIntegrationTests
 
         // Assert - Should use original validation format
         var validator = result.Validators["TestModel"];
-        Assert.Contains(".Must(x =&gt; x.Count &gt;= 1)", validator); // HTML encoded in template output
-        Assert.Contains(".Must(x =&gt; x.Count &lt;= 5)", validator);
+        Assert.Contains(".Must(x => x.Count >= 1)", validator); // Properly formatted output
+        Assert.Contains(".Must(x => x.Count <= 5)", validator);
         Assert.Contains("x.Distinct().Count() == x.Count", validator);
     }
 

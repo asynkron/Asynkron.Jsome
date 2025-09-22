@@ -616,7 +616,7 @@ public class CodeGenerator
             rules.Add(new ValidationRule 
             { 
                 Rule = "Matches", 
-                Parameters = [$"\"{effectivePattern}\""],
+                Parameters = [$"@\"{effectivePattern}\""],
                 Message = customMessage ?? $"Must match pattern: {effectivePattern}"
             });
         }

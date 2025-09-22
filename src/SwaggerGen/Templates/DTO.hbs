@@ -10,15 +10,11 @@ public class {{ClassName}}
 {
 {{#each Properties}}
     /// <summary>
-    /// {{Description}}
-    /// {{#if EnumTypeName}}
-    /// Uses enum type: <see cref="{{EnumTypeName}}"/>
-    /// {{else if ConstantsClassName}}
-    /// Allowed values defined in: <see cref="{{ConstantsClassName}}"/>
-    /// {{else if EnumValues}}
-    /// Allowed values: {{#each EnumValues}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
-    /// {{/if}}
-    /// </summary>
+{{#if Description}}    /// {{Description}}
+{{/if}}{{#if EnumTypeName}}    /// Uses enum type: <see cref="{{EnumTypeName}}"/>
+{{/if}}{{#if ConstantsClassName}}    /// Allowed values defined in: <see cref="{{ConstantsClassName}}"/>
+{{/if}}{{#if EnumValues}}    /// Allowed values: {{#each EnumValues}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+{{/if}}    /// </summary>
     {{#if JsonPropertyName}}
     [JsonProperty("{{JsonPropertyName}}")]
     {{/if}}
@@ -31,7 +27,7 @@ public class {{ClassName}}
     {{#if MinLength}}
     [MinLength({{MinLength}})]
     {{/if}}
-    public {{Type}} {{Name}} { get; set; }{{#if DefaultValue}} = {{DefaultValue}};{{/if}}
+    public {{{Type}}} {{Name}} { get; set; }{{#if DefaultValue}} = {{DefaultValue}};{{/if}}
 
 {{/each}}
 }
