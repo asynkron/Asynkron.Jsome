@@ -136,8 +136,8 @@ public class ModernCSharpFeaturesTests
         var userDto = result.DtoClasses["User"];
         
         // Should generate a record instead of a class
-        Assert.Contains("public record User(", userDto);
-        Assert.DoesNotContain("public class User", userDto);
+        Assert.Contains("public partial record User(", userDto);
+        Assert.DoesNotContain("public partial class User", userDto);
         
         // Should use required keyword for required fields
         Assert.Contains("required string Name", userDto);
@@ -185,7 +185,7 @@ public class ModernCSharpFeaturesTests
         var productDto = result.DtoClasses["Product"];
         
         // Should be a record
-        Assert.Contains("public record Product(", productDto);
+        Assert.Contains("public partial record Product(", productDto);
         
         // Should have JSON property mapping
         Assert.Contains("[JsonProperty(\"product_id\")]", productDto);
@@ -235,7 +235,7 @@ public class ModernCSharpFeaturesTests
         var userDto = result.DtoClasses["User"];
         
         // Should generate traditional class
-        Assert.Contains("public class User", userDto);
+        Assert.Contains("public partial class User", userDto);
         
         // Should use [Required] attribute
         Assert.Contains("[Required]", userDto);

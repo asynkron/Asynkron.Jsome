@@ -335,11 +335,11 @@ public class ModifierConfigurationIntegrationTests
         // Assert - Check DTO class names have prefix
         Assert.True(result.DtoClasses.ContainsKey("User"));
         var userDto = result.DtoClasses["User"];
-        Assert.Contains("public class ApiUser", userDto);
+        Assert.Contains("public partial class ApiUser", userDto);
         
         Assert.True(result.DtoClasses.ContainsKey("Address"));
         var addressDto = result.DtoClasses["Address"];
-        Assert.Contains("public class ApiAddress", addressDto);
+        Assert.Contains("public partial class ApiAddress", addressDto);
 
         // Assert - Check enum names have prefix
         Assert.True(result.EnumTypes.Count > 0);
@@ -409,7 +409,7 @@ public class ModifierConfigurationIntegrationTests
 
         // Assert - Check DTO class names have suffix
         var productDto = result.DtoClasses["Product"];
-        Assert.Contains("public class ProductDTO", productDto);
+        Assert.Contains("public partial class ProductDTO", productDto);
 
         // Assert - Check enum names have suffix
         var enumKey = result.EnumTypes.Keys.First();
@@ -465,7 +465,7 @@ public class ModifierConfigurationIntegrationTests
 
         // Assert - Check DTO class names have both prefix and suffix
         var orderDto = result.DtoClasses["Order"];
-        Assert.Contains("public class ApiOrderModel", orderDto);
+        Assert.Contains("public partial class ApiOrderModel", orderDto);
 
         // Assert - Check constants class names have both prefix and suffix
         var constantKey = result.ConstantClasses.Keys.First();
@@ -514,7 +514,7 @@ public class ModifierConfigurationIntegrationTests
 
         // Assert - Should behave same as no configuration
         var userDto = result.DtoClasses["User"];
-        Assert.Contains("public class User", userDto);
+        Assert.Contains("public partial class User", userDto);
     }
 
     [Fact]
@@ -580,7 +580,7 @@ rules:
             // Assert - Type names should have prefix and suffix
             var userDto = result.DtoClasses["User"];
             Assert.Contains("namespace Example.Generated", userDto);
-            Assert.Contains("public class ApiUserDTO", userDto);
+            Assert.Contains("public partial class ApiUserDTO", userDto);
             Assert.Contains("public string Id { get; set; }", userDto);
             // Password should be excluded
             Assert.DoesNotContain("password", userDto.ToLowerInvariant());
