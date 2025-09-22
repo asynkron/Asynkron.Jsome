@@ -18,6 +18,7 @@ public class EnumValueInfo
 {
     public string Name { get; set; } = string.Empty;
     public object Value { get; set; } = 0;
+    public string ValueLiteral { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
 }
 
