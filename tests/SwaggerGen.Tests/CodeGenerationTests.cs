@@ -171,7 +171,7 @@ public class CodeGenerationTests
         var validator = result.Validators["ValidationTest"];
         Assert.Contains(".GreaterThanOrEqualTo(0)", validator);
         Assert.Contains(".LessThanOrEqualTo(100)", validator);
-        Assert.Contains(@".Matches(&quot;^\d{3}-\d{2}-\d{4}$&quot;)", validator);
+        Assert.Contains(@".Matches(@""^\d{3}-\d{2}-\d{4}$"")", validator);
     }
 
     [Fact]
@@ -299,9 +299,9 @@ public class CodeGenerationTests
 
         // Assert
         var validator = result.Validators["ArrayTest"];
-        Assert.Contains(".Must(x =&gt; x.Count &gt;= 1)", validator);
-        Assert.Contains(".Must(x =&gt; x.Count &lt;= 5)", validator);
-        Assert.Contains(".Must(x =&gt; x.Distinct().Count() == x.Count)", validator);
+        Assert.Contains(".Must(x => x.Count >= 1)", validator);
+        Assert.Contains(".Must(x => x.Count <= 5)", validator);
+        Assert.Contains(".Must(x => x.Distinct().Count() == x.Count)", validator);
         Assert.Contains("Must contain at least 1 items", validator);
         Assert.Contains("Must contain at most 5 items", validator);
         Assert.Contains("All items must be unique", validator);
@@ -344,8 +344,8 @@ public class CodeGenerationTests
 
         // Assert
         var validator = result.Validators["NumberTest"];
-        Assert.Contains(".Must(x =&gt; x % 0.5 == 0)", validator);
-        Assert.Contains(".Must(x =&gt; x % 5 == 0)", validator);
+        Assert.Contains(".Must(x => x % 0.5 == 0)", validator);
+        Assert.Contains(".Must(x => x % 5 == 0)", validator);
         Assert.Contains("Must be a multiple of 0.5", validator);
         Assert.Contains("Must be a multiple of 5", validator);
     }
@@ -385,10 +385,10 @@ public class CodeGenerationTests
 
         // Assert
         var validator = result.Validators["EnumTest"];
-        Assert.Contains(".Must(x =&gt; new[] { &quot;active&quot;, &quot;inactive&quot;, &quot;pending&quot; }.Contains(x.ToString()))", validator);
-        Assert.Contains(".Must(x =&gt; new[] { &quot;1&quot;, &quot;2&quot;, &quot;3&quot; }.Contains(x.ToString()))", validator);
-        Assert.Contains("Must be one of: &quot;active&quot;, &quot;inactive&quot;, &quot;pending&quot;", validator);
-        Assert.Contains("Must be one of: &quot;1&quot;, &quot;2&quot;, &quot;3&quot;", validator);
+        Assert.Contains(@".Must(x => new[] { ""active"", ""inactive"", ""pending"" }.Contains(x.ToString()))", validator);
+        Assert.Contains(@".Must(x => new[] { ""1"", ""2"", ""3"" }.Contains(x.ToString()))", validator);
+        Assert.Contains(@"Must be one of: ""active"", ""inactive"", ""pending""", validator);
+        Assert.Contains(@"Must be one of: ""1"", ""2"", ""3""", validator);
         
         // Check that enum values are documented in DTO
         var dto = result.DtoClasses["EnumTest"];
@@ -497,10 +497,10 @@ public class CodeGenerationTests
         var validator = result.Validators["ValidationTest"];
         
         // String enum validation uses direct string comparison
-        Assert.Contains(".Must(x =&gt; new[] { &quot;active&quot;, &quot;inactive&quot; }.Contains(x))", validator);
+        Assert.Contains(@".Must(x => new[] { ""active"", ""inactive"" }.Contains(x))", validator);
         
         // Integer enum validation uses Enum.IsDefined
-        Assert.Contains(".Must(x =&gt; Enum.IsDefined(typeof(ValidationTestPriority), x))", validator);
+        Assert.Contains(".Must(x => Enum.IsDefined(typeof(ValidationTestPriority), x))", validator);
         Assert.Contains("Must be a valid ValidationTestPriority value", validator);
     }
 
@@ -552,8 +552,8 @@ public class CodeGenerationTests
         
         // Should use legacy validation
         var validator = result.Validators["BackwardTest"];
-        Assert.Contains(".Must(x =&gt; new[] { &quot;active&quot;, &quot;inactive&quot; }.Contains(x.ToString()))", validator);
-        Assert.Contains(".Must(x =&gt; new[] { &quot;1&quot;, &quot;2&quot;, &quot;3&quot; }.Contains(x.ToString()))", validator);
+        Assert.Contains(@".Must(x => new[] { ""active"", ""inactive"" }.Contains(x.ToString()))", validator);
+        Assert.Contains(@".Must(x => new[] { ""1"", ""2"", ""3"" }.Contains(x.ToString()))", validator);
     }
 
     [Fact]
