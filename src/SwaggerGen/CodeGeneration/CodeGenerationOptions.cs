@@ -25,4 +25,10 @@ public class CodeGenerationOptions
     /// this instance takes precedence.
     /// </summary>
     public ModifierConfiguration? ModifierConfiguration { get; set; }
+
+    /// <summary>
+    /// Custom directory path for Handlebars templates. If specified, templates will be loaded from this directory.
+    /// If null or empty, the default template discovery logic is used.
+    /// </summary>
+    public string? TemplateDirectory { get; set; }
 }

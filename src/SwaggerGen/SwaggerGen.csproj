@@ -33,6 +33,10 @@
 
   <ItemGroup>
     <None Include="Templates\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Templates\**\*">
+      <PackagePath>contentFiles/any/any/Templates/%(RecursiveDir)%(Filename)%(Extension)</PackagePath>
+      <Pack>true</Pack>
+    </Content>
   </ItemGroup>
 
 </Project>

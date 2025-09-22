@@ -62,6 +62,10 @@ class Program
         var yesOption = new Option<bool>(
             aliases: ["--yes", "-y"],
             description: "Skip confirmation prompts and proceed automatically");
+
+        var templateDirOption = new Option<DirectoryInfo?>(
+            aliases: new[] { "--template-dir", "-t" },
+            description: "Custom directory containing Handlebars template files (DTO.hbs, Validator.hbs, etc.)");
             
         var generateCommand = new Command("generate", "Generate C# code from a Swagger specification")
         {
@@ -69,13 +73,14 @@ class Program
             configOption,
             namespaceOption,
             outputOption,
-            yesOption
+            yesOption,
+            templateDirOption
         };
 
-        generateCommand.SetHandler(async (swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation) =>
+        generateCommand.SetHandler(async (swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir) =>
         {
-            await HandleGenerateCommand(swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation);
-        }, swaggerFileArgument, configOption, namespaceOption, outputOption, yesOption);
+            await HandleGenerateCommand(swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir);
+        }, swaggerFileArgument, configOption, namespaceOption, outputOption, yesOption, templateDirOption);
 
         return generateCommand;
     }
@@ -92,7 +97,7 @@ class Program
         return helpCommand;
     }
 
-    private static async Task HandleGenerateCommand(FileInfo? swaggerFile, FileInfo? configFile, string? namespaceOverride, DirectoryInfo? outputDir, bool skipConfirmation)
+    private static async Task HandleGenerateCommand(FileInfo? swaggerFile, FileInfo? configFile, string? namespaceOverride, DirectoryInfo? outputDir, bool skipConfirmation, DirectoryInfo? templateDir)
     {
         try
         {
@@ -116,7 +121,7 @@ class Program
             }
 
             // Generate code
-            await GenerateCode(document, config, namespaceOverride, outputDir);
+            await GenerateCode(document, config, namespaceOverride, outputDir, templateDir);
 
             AnsiConsole.MarkupLine("[green]✓ Code generation completed successfully![/]");
         }
@@ -319,7 +324,7 @@ class Program
         AnsiConsole.WriteLine();
     }
 
-    private static async Task GenerateCode(SwaggerDocument document, ModifierConfiguration? config, string? namespaceOverride, DirectoryInfo? outputDir)
+    private static async Task GenerateCode(SwaggerDocument document, ModifierConfiguration? config, string? namespaceOverride, DirectoryInfo? outputDir, DirectoryInfo? templateDir)
     {
         AnsiConsole.MarkupLine("[green]⚙️  Generating C# code...[/]");
         
@@ -328,6 +333,12 @@ class Program
         if (config != null)
         {
             options.ModifierConfiguration = config;
+        }
+        
+        // Set custom template directory if provided
+        if (templateDir != null)
+        {
+            options.TemplateDirectory = templateDir.FullName;
         }
         
         // Apply namespace override if provided
@@ -468,6 +479,12 @@ class Program
             "[cyan]swaggergen generate --output <dir>[/]",
             "Write generated files to directory",
             "[dim]swaggergen generate --output ./generated[/]"
+        );
+        
+        helpTable.AddRow(
+            "[cyan]swaggergen generate --template-dir <dir>[/]",
+            "Use custom template directory",
+            "[dim]swaggergen generate --template-dir ./my-templates[/]"
         );
 
         var panel = new Panel(helpTable)
