@@ -1,0 +1,16 @@
+---
+extension: proto
+description: Protocol Buffers message template
+---
+syntax = "proto3";
+
+// {{Description}}
+message {{ClassName}} {
+{{#each Properties}}
+  // {{Description}}{{#if EnumTypeName}}
+  // Uses enum type: {{EnumTypeName}}{{/if}}{{#if ConstantsClassName}}
+  // Allowed values defined in: {{ConstantsClassName}}{{/if}}{{#if EnumValues}}
+  // Allowed values: {{#each EnumValues}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}}
+  {{proto_type Type}} {{snake_case Name}} = {{add @index 1}};
+{{/each}}
+}

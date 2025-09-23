@@ -67,6 +67,12 @@ public class CodeGenerationOptions
     public bool UseSwashbuckleAttributes { get; set; } = false;
 
     /// <summary>
+    /// When true, generates Protocol Buffers (.proto) templates in addition to C# templates.
+    /// Default: false (for backward compatibility)
+    /// </summary>
+    public bool GenerateProtoFiles { get; set; } = false;
+
+    /// <summary>
     /// List of specific template files to use for code generation. When specified, only these templates will be processed.
     /// Template files should be specified as file names (e.g., "DTO.hbs", "MyCustomTemplate.hbs").
     /// If null or empty, the default behavior applies (load all standard templates).
