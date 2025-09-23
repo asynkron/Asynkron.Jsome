@@ -239,8 +239,9 @@ public class ProtoTemplateTests
 
     private static string GetTemplatesPath()
     {
-        // Use absolute path to templates directory
-        var templatesPath = "/home/runner/work/SwaggerGen/SwaggerGen/src/SwaggerGen/Templates";
+        // TODO: figure this part out, in dev mode, I want to point to src/SwaggerGen/Templates
+        // but dotnet tool will be installed elsewhere. can we get the current CLI directory?
+        var templatesPath = "../../../../../src/SwaggerGen/Templates";
         
         if (!Directory.Exists(templatesPath))
         {
