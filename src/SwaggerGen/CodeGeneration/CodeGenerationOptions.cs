@@ -65,4 +65,11 @@ public class CodeGenerationOptions
     /// Default: false (for backward compatibility)
     /// </summary>
     public bool UseSwashbuckleAttributes { get; set; } = false;
+
+    /// <summary>
+    /// List of specific template files to use for code generation. When specified, only these templates will be processed.
+    /// Template files should be specified as file names (e.g., "DTO.hbs", "MyCustomTemplate.hbs").
+    /// If null or empty, the default behavior applies (load all standard templates).
+    /// </summary>
+    public List<string>? CustomTemplateFiles { get; set; }
 }
