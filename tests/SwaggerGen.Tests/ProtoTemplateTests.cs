@@ -239,15 +239,47 @@ public class ProtoTemplateTests
 
     private static string GetTemplatesPath()
     {
-        // TODO: figure this part out, in dev mode, I want to point to src/SwaggerGen/Templates
-        // but dotnet tool will be installed elsewhere. can we get the current CLI directory?
-        var templatesPath = "../../../../../src/SwaggerGen/Templates";
-        
-        if (!Directory.Exists(templatesPath))
+        // Use the same logic as CodeGenerator to find templates directory
+        // Priority 1: Development-time fallback - walk up directory tree to find source templates
+        var currentDir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (currentDir != null)
         {
-            throw new DirectoryNotFoundException($"Templates directory not found at: {templatesPath}");
+            var srcPath = Path.Combine(currentDir.FullName, "src", "SwaggerGen", "Templates");
+            if (Directory.Exists(srcPath))
+            {
+                return srcPath;
+            }
+            currentDir = currentDir.Parent;
         }
+
+        // Priority 2: Check if templates are in the current directory
+        if (Directory.Exists("Templates"))
+        {
+            return Path.GetFullPath("Templates");
+        }
+
+        // Priority 3: Check tool installation directory
+        var basePath = AppDomain.CurrentDomain.BaseDirectory;
+        var templatesPath = Path.Combine(basePath, "Templates");
         
-        return templatesPath;
+        if (Directory.Exists(templatesPath))
+        {
+            return templatesPath;
+        }
+
+        // Priority 4: Check contentFiles location for NuGet package
+        var contentFilesPath = Path.Combine(basePath, "contentFiles", "any", "any", "Templates");
+        if (Directory.Exists(contentFilesPath))
+        {
+            return contentFilesPath;
+        }
+
+        throw new DirectoryNotFoundException(
+            "Template files not found. Checked locations:\n" +
+            $"  - Source directory search from: {Directory.GetCurrentDirectory()}\n" +
+            $"  - Current directory: Templates\n" +
+            $"  - Tool directory: {templatesPath}\n" +
+            $"  - ContentFiles directory: {contentFilesPath}\n\n" +
+            "Unable to locate template files for testing.");
     }
 }
