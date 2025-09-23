@@ -1,0 +1,8 @@
+# Configuration for Guidewire Claims DTOs
+# Adds "Dto" suffix to all generated type names
+global:
+  namespace: "Guidewire.Claims.Generated"
+  typeNameSuffix: "Dto"
+  generateEnumTypes: true
+  defaultInclude: true
+  includeDescriptions: true
