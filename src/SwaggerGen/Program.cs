@@ -529,8 +529,8 @@ class Program
             // Write custom template output
             foreach (var customOutput in result.CustomTemplateOutput)
             {
-                var filePath = Path.Combine(outputDir.FullName, $"{customOutput.Key}.cs");
-                await File.WriteAllTextAsync(filePath, customOutput.Value);
+                var filePath = Path.Combine(outputDir.FullName, $"{customOutput.Key}.{customOutput.Value.Extension}");
+                await File.WriteAllTextAsync(filePath, customOutput.Value.Content);
                 task.Increment(1);
                 await Task.Delay(10); // Small delay for visual effect
             }
@@ -623,9 +623,9 @@ class Program
 
             foreach (var customOutput in result.CustomTemplateOutput)
             {
-                var panel = new Panel(Markup.Escape(customOutput.Value))
+                var panel = new Panel(Markup.Escape(customOutput.Value.Content))
                 {
-                    Header = new PanelHeader($"[bold]{customOutput.Key}.cs[/]"),
+                    Header = new PanelHeader($"[bold]{customOutput.Key}.{customOutput.Value.Extension}[/]"),
                     Border = BoxBorder.Rounded
                 };
                 AnsiConsole.Write(panel);

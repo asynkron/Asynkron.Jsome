@@ -56,7 +56,7 @@ public class CustomTemplateTests
             Assert.Empty(result.Validators);
             Assert.NotEmpty(result.CustomTemplateOutput);
             
-            var customOutput = result.CustomTemplateOutput.First().Value;
+            var customOutput = result.CustomTemplateOutput.First().Value.Content;
             Assert.Contains("Custom template for TestClass", customOutput);
             Assert.Contains("public class CustomTestClass", customOutput);
         }
@@ -121,6 +121,88 @@ public class CustomTemplateTests
         Assert.NotEmpty(result.DtoClasses);
         Assert.NotEmpty(result.Validators);
         Assert.Empty(result.CustomTemplateOutput); // No custom templates
+    }
+
+    [Fact]
+    public void CustomTemplateFiles_WithFrontmatter_UsesCorrectFileExtension()
+    {
+        // Arrange
+        var document = CreateTestSwaggerDocument();
+        
+        // Create a template with frontmatter specifying file extension
+        var customTemplatePath = Path.Combine(GetTemplatesPath(), "TestFSharp.hbs");
+        var templateWithFrontmatter = @"---
+extension: fs
+description: F# test template
+---
+// F# template for {{ClassName}}
+type {{ClassName}} = { }";
+        
+        File.WriteAllText(customTemplatePath, templateWithFrontmatter);
+        
+        try
+        {
+            var options = new CodeGenerationOptions
+            {
+                CustomTemplateFiles = new List<string> { "TestFSharp.hbs" },
+                TemplateDirectory = GetTemplatesPath()
+            };
+
+            // Act
+            var generator = new CodeGenerator(options);
+            var result = generator.GenerateCode(document);
+
+            // Assert
+            Assert.NotEmpty(result.CustomTemplateOutput);
+            
+            var generatedFile = result.CustomTemplateOutput.First().Value;
+            Assert.Equal("fs", generatedFile.Extension);
+            Assert.Contains("// F# template for TestClass", generatedFile.Content);
+            Assert.Contains("type TestClass = { }", generatedFile.Content);
+        }
+        finally
+        {
+            // Cleanup
+            if (File.Exists(customTemplatePath))
+                File.Delete(customTemplatePath);
+        }
+    }
+
+    [Fact]
+    public void CustomTemplateFiles_WithoutFrontmatter_UsesDefaultExtension()
+    {
+        // Arrange
+        var document = CreateTestSwaggerDocument();
+        
+        // Create a template without frontmatter
+        var customTemplatePath = Path.Combine(GetTemplatesPath(), "TestDefault.hbs");
+        File.WriteAllText(customTemplatePath, "// Default template for {{ClassName}}\npublic class {{ClassName}} { }");
+        
+        try
+        {
+            var options = new CodeGenerationOptions
+            {
+                CustomTemplateFiles = new List<string> { "TestDefault.hbs" },
+                TemplateDirectory = GetTemplatesPath()
+            };
+
+            // Act
+            var generator = new CodeGenerator(options);
+            var result = generator.GenerateCode(document);
+
+            // Assert
+            Assert.NotEmpty(result.CustomTemplateOutput);
+            
+            var generatedFile = result.CustomTemplateOutput.First().Value;
+            Assert.Equal("cs", generatedFile.Extension); // Should use default "cs"
+            Assert.Contains("// Default template for TestClass", generatedFile.Content);
+        }
+        finally
+        {
+            // Cleanup
+            if (File.Exists(customTemplatePath))
+                File.Delete(customTemplatePath);
+        }
     }
 
     private SwaggerDocument CreateTestSwaggerDocument()

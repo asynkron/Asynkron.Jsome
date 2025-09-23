@@ -12,7 +12,7 @@ namespace SwaggerGen.CodeGeneration;
 public class CodeGenerator
 {
     private readonly IHandlebars _handlebars;
-    private readonly Dictionary<string, string> _templates;
+    private readonly Dictionary<string, TemplateMetadata> _templates;
     private readonly CodeGenerationOptions _options;
     private readonly ModifierConfiguration? _modifierConfig;
 
@@ -20,7 +20,7 @@ public class CodeGenerator
     {
         _options = options ?? new CodeGenerationOptions();
         _handlebars = Handlebars.Create();
-        _templates = new Dictionary<string, string>();
+        _templates = new Dictionary<string, TemplateMetadata>();
         
         // Load modifier configuration if specified
         _modifierConfig = LoadModifierConfiguration();
@@ -55,8 +55,78 @@ public class CodeGenerator
         foreach (var (fileName, description) in templatesToLoad)
         {
             var templatePath = Path.Combine(basePath, fileName);
-            _templates[fileName] = File.ReadAllText(templatePath);
+            var templateContent = File.ReadAllText(templatePath);
+            _templates[fileName] = ParseTemplateWithFrontmatter(templateContent);
         }
+    }
+
+    private TemplateMetadata ParseTemplateWithFrontmatter(string content)
+    {
+        var metadata = new TemplateMetadata();
+        
+        // Check if content starts with frontmatter (--- at the beginning)
+        if (content.StartsWith("---"))
+        {
+            var lines = content.Split('\n');
+            var frontmatterEnd = -1;
+            
+            // Find the end of frontmatter (second ---)
+            for (int i = 1; i < lines.Length; i++)
+            {
+                if (lines[i].Trim() == "---")
+                {
+                    frontmatterEnd = i;
+                    break;
+                }
+            }
+            
+            if (frontmatterEnd > 0)
+            {
+                // Parse frontmatter (simple key: value format)
+                for (int i = 1; i < frontmatterEnd; i++)
+                {
+                    var line = lines[i].Trim();
+                    if (string.IsNullOrEmpty(line) || line.StartsWith("#"))
+                        continue;
+                        
+                    var colonIndex = line.IndexOf(':');
+                    if (colonIndex > 0)
+                    {
+                        var key = line.Substring(0, colonIndex).Trim().ToLowerInvariant();
+                        var value = line.Substring(colonIndex + 1).Trim();
+                        
+                        // Remove quotes if present
+                        if (value.StartsWith("\"") && value.EndsWith("\""))
+                            value = value.Substring(1, value.Length - 2);
+                        
+                        switch (key)
+                        {
+                            case "extension":
+                                metadata.Extension = value;
+                                break;
+                            case "description":
+                                metadata.Description = value;
+                                break;
+                        }
+                    }
+                }
+                
+                // Extract content after frontmatter
+                metadata.Content = string.Join('\n', lines.Skip(frontmatterEnd + 1));
+            }
+            else
+            {
+                // Malformed frontmatter, use entire content
+                metadata.Content = content;
+            }
+        }
+        else
+        {
+            // No frontmatter, use entire content
+            metadata.Content = content;
+        }
+        
+        return metadata;
     }
 
     private ModifierConfiguration? LoadModifierConfiguration()
@@ -219,12 +289,14 @@ public class CodeGenerator
                         
                         try
                         {
-                            var template = _handlebars.Compile(_templates[customTemplate]);
+                            var templateMetadata = _templates[customTemplate];
+                            var template = _handlebars.Compile(templateMetadata.Content);
                             var generatedCode = template(classInfo);
                             
-                            // Store custom template output in a separate collection
+                            // Store custom template output with metadata
                             var templateKey = $"{definition.Key}_{Path.GetFileNameWithoutExtension(customTemplate)}";
-                            result.CustomTemplateOutput[templateKey] = generatedCode;
+                            var generatedFile = new GeneratedFile(generatedCode, templateMetadata.Extension);
+                            result.CustomTemplateOutput[templateKey] = generatedFile;
                         }
                         catch (Exception ex)
                         {
@@ -243,14 +315,14 @@ public class CodeGenerator
         // Use record template if records are enabled and available
         if (_options.GenerateRecords && _templates.ContainsKey("DTORecord.hbs"))
         {
-            var recordTemplate = _handlebars.Compile(_templates["DTORecord.hbs"]);
+            var recordTemplate = _handlebars.Compile(_templates["DTORecord.hbs"].Content);
             return recordTemplate(classInfo);
         }
         
         // Use standard DTO template if available
         if (_templates.ContainsKey("DTO.hbs"))
         {
-            var template = _handlebars.Compile(_templates["DTO.hbs"]);
+            var template = _handlebars.Compile(_templates["DTO.hbs"].Content);
             return template(classInfo);
         }
         
@@ -262,7 +334,7 @@ public class CodeGenerator
     {
         if (_templates.ContainsKey("Validator.hbs"))
         {
-            var template = _handlebars.Compile(_templates["Validator.hbs"]);
+            var template = _handlebars.Compile(_templates["Validator.hbs"].Content);
             return template(classInfo);
         }
         
@@ -273,7 +345,7 @@ public class CodeGenerator
     {
         if (_templates.ContainsKey("Enum.hbs"))
         {
-            var template = _handlebars.Compile(_templates["Enum.hbs"]);
+            var template = _handlebars.Compile(_templates["Enum.hbs"].Content);
             return template(enumInfo);
         }
         
@@ -284,7 +356,7 @@ public class CodeGenerator
     {
         if (_templates.ContainsKey("Constants.hbs"))
         {
-            var template = _handlebars.Compile(_templates["Constants.hbs"]);
+            var template = _handlebars.Compile(_templates["Constants.hbs"].Content);
             return template(constantsInfo);
         }
         

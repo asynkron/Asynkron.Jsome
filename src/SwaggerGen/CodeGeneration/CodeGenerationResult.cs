@@ -26,7 +26,7 @@ public class CodeGenerationResult
     public Dictionary<string, string> ConstantClasses { get; set; } = new();
 
     /// <summary>
-    /// Generated code from custom templates keyed by template and class name
+    /// Generated code from custom templates with file metadata
     /// </summary>
-    public Dictionary<string, string> CustomTemplateOutput { get; set; } = new();
+    public Dictionary<string, GeneratedFile> CustomTemplateOutput { get; set; } = new();
 }
