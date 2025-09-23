@@ -22,6 +22,9 @@ public class CodeGenerator
         _handlebars = Handlebars.Create();
         _templates = new Dictionary<string, TemplateMetadata>();
         
+        // Register Handlebars helpers for proto templates
+        RegisterHandlebarsHelpers();
+        
         // Load modifier configuration if specified
         _modifierConfig = LoadModifierConfiguration();
         
@@ -176,6 +179,14 @@ public class CodeGenerator
             standardTemplates.Add(("DTORecord.hbs", "DTO Record template"));
         }
 
+        // Add proto templates if proto generation is enabled
+        if (_options.GenerateProtoFiles)
+        {
+            standardTemplates.Add(("proto.hbs", "Protocol Buffers message template"));
+            standardTemplates.Add(("proto.enum.hbs", "Protocol Buffers enum template"));
+            standardTemplates.Add(("proto.string_enum.hbs", "Protocol Buffers string enum template"));
+        }
+
         return standardTemplates;
     }
 
@@ -262,6 +273,79 @@ public class CodeGenerator
                 catch (InvalidOperationException ex) when (ex.Message.Contains("No Validator template available"))
                 {
                     // Skip validator generation if template is not available
+                }
+            }
+        }
+        
+        // Handle proto template generation if enabled
+        if (_options.GenerateProtoFiles)
+        {
+            // Generate proto messages for all definitions
+            if (_templates.ContainsKey("proto.hbs"))
+            {
+                foreach (var definition in document.Definitions)
+                {
+                    // Check if this class should be included based on configuration
+                    var classPath = definition.Key;
+                    if (_modifierConfig != null && !_modifierConfig.IsIncluded(classPath))
+                        continue;
+                    
+                    try
+                    {
+                        var templateMetadata = _templates["proto.hbs"];
+                        var template = _handlebars.Compile(templateMetadata.Content);
+                        var classInfo = ConvertSchemaToClassInfo(definition.Key, definition.Value, targetNamespace, document.Definitions, enumInfos, constantsInfos, classPath);
+                        var generatedCode = template(classInfo);
+                        var templateKey = $"{definition.Key}_proto";
+                        var generatedFile = new GeneratedFile(generatedCode, templateMetadata.Extension);
+                        result.CustomTemplateOutput[templateKey] = generatedFile;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidOperationException($"Error processing proto template for class '{definition.Key}': {ex.Message}", ex);
+                    }
+                }
+            }
+            
+            // Generate proto enums for integer enums
+            if (_templates.ContainsKey("proto.enum.hbs"))
+            {
+                foreach (var enumInfo in enumInfos.Values)
+                {
+                    try
+                    {
+                        var templateMetadata = _templates["proto.enum.hbs"];
+                        var template = _handlebars.Compile(templateMetadata.Content);
+                        var generatedCode = template(enumInfo);
+                        var templateKey = $"{enumInfo.EnumName}_proto.enum";
+                        var generatedFile = new GeneratedFile(generatedCode, templateMetadata.Extension);
+                        result.CustomTemplateOutput[templateKey] = generatedFile;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidOperationException($"Error processing proto.enum template for enum '{enumInfo.EnumName}': {ex.Message}", ex);
+                    }
+                }
+            }
+            
+            // Generate proto string enums for constants
+            if (_templates.ContainsKey("proto.string_enum.hbs"))
+            {
+                foreach (var constantsInfo in constantsInfos.Values)
+                {
+                    try
+                    {
+                        var templateMetadata = _templates["proto.string_enum.hbs"];
+                        var template = _handlebars.Compile(templateMetadata.Content);
+                        var generatedCode = template(constantsInfo);
+                        var templateKey = $"{constantsInfo.ClassName}_proto.string_enum";
+                        var generatedFile = new GeneratedFile(generatedCode, templateMetadata.Extension);
+                        result.CustomTemplateOutput[templateKey] = generatedFile;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidOperationException($"Error processing proto.string_enum template for constants '{constantsInfo.ClassName}': {ex.Message}", ex);
+                    }
                 }
             }
         }
@@ -1186,5 +1270,81 @@ public class CodeGenerator
             $"  - Source directory search from: {Directory.GetCurrentDirectory()}\n" +
             $"  - Current directory: Templates\n\n" +
             "To specify a custom template directory, use the --template-dir option or set the TemplateDirectory property in CodeGenerationOptions.");
+    }
+
+    private void RegisterHandlebarsHelpers()
+    {
+        // Helper for proto field numbering (1-based indexing)
+        _handlebars.RegisterHelper("add", (writer, context, parameters) =>
+        {
+            if (parameters.Length == 2 && 
+                int.TryParse(parameters[0].ToString(), out var num1) && 
+                int.TryParse(parameters[1].ToString(), out var num2))
+            {
+                writer.WriteSafeString((num1 + num2).ToString());
+            }
+        });
+
+        // Helper for converting strings to snake_case (common in proto files)
+        _handlebars.RegisterHelper("snake_case", (writer, context, parameters) =>
+        {
+            if (parameters.Length == 1 && parameters[0] != null)
+            {
+                var input = parameters[0].ToString();
+                if (!string.IsNullOrEmpty(input))
+                {
+                    var snakeCase = ToSnakeCase(input);
+                    writer.WriteSafeString(snakeCase);
+                }
+            }
+        });
+
+        // Helper for converting C# types to proto types
+        _handlebars.RegisterHelper("proto_type", (writer, context, parameters) =>
+        {
+            if (parameters.Length == 1 && parameters[0] != null)
+            {
+                var csharpType = parameters[0].ToString();
+                if (!string.IsNullOrEmpty(csharpType))
+                {
+                    var protoType = ConvertToProtoType(csharpType);
+                    writer.WriteSafeString(protoType);
+                }
+            }
+        });
+    }
+
+    private static string ToSnakeCase(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return input;
+
+        var result = new StringBuilder();
+        for (int i = 0; i < input.Length; i++)
+        {
+            if (i > 0 && char.IsUpper(input[i]))
+                result.Append('_');
+            result.Append(char.ToLower(input[i]));
+        }
+        return result.ToString();
+    }
+
+    private static string ConvertToProtoType(string csharpType)
+    {
+        return csharpType switch
+        {
+            "string" or "string?" => "string",
+            "int" or "int?" => "int32",
+            "long" or "long?" => "int64",
+            "float" or "float?" => "float",
+            "double" or "double?" => "double",
+            "bool" or "bool?" => "bool",
+            "decimal" or "decimal?" => "double", // Proto doesn't have decimal
+            "DateTime" or "DateTime?" => "google.protobuf.Timestamp",
+            "Guid" or "Guid?" => "string", // UUIDs as strings in proto
+            _ when csharpType.StartsWith("List<") => "repeated " + ConvertToProtoType(csharpType[5..^1]),
+            _ when csharpType.EndsWith("[]") => "repeated " + ConvertToProtoType(csharpType[..^2]),
+            _ => csharpType // For custom types/enums, use as-is
+        };
     }
 }

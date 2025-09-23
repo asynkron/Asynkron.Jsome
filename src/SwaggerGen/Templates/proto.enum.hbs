@@ -1,0 +1,15 @@
+---
+extension: proto
+description: Protocol Buffers enum template
+---
+syntax = "proto3";
+
+// {{Description}}
+enum {{EnumName}} {
+  // Default value (required in proto3)
+  {{snake_case EnumName}}_UNSPECIFIED = 0;
+{{#each Values}}
+  // {{Description}}
+  {{snake_case Name}} = {{Value}};
+{{/each}}
+}

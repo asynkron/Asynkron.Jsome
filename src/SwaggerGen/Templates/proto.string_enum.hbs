@@ -1,0 +1,17 @@
+---
+extension: proto
+description: Protocol Buffers string enum template (as enum with string values)
+---
+syntax = "proto3";
+
+// {{Description}}
+// Note: String enums in proto are typically handled as regular enums
+// with a mapping defined in the application layer
+enum {{ClassName}} {
+  // Default value (required in proto3)
+  {{snake_case ClassName}}_UNSPECIFIED = 0;
+{{#each Constants}}
+  // {{Description}} (original value: "{{Value}}")
+  {{snake_case Name}} = {{add @index 1}};
+{{/each}}
+}
