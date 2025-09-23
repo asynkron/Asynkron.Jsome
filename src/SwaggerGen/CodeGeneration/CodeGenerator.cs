@@ -12,11 +12,7 @@ namespace SwaggerGen.CodeGeneration;
 public class CodeGenerator
 {
     private readonly IHandlebars _handlebars;
-    private readonly string _dtoTemplate;
-    private readonly string _validatorTemplate;
-    private readonly string _enumTemplate;
-    private readonly string _constantsTemplate;
-    private readonly string? _dtoRecordTemplate;
+    private readonly Dictionary<string, TemplateMetadata> _templates;
     private readonly CodeGenerationOptions _options;
     private readonly ModifierConfiguration? _modifierConfig;
 
@@ -24,29 +20,20 @@ public class CodeGenerator
     {
         _options = options ?? new CodeGenerationOptions();
         _handlebars = Handlebars.Create();
+        _templates = new Dictionary<string, TemplateMetadata>();
         
         // Load modifier configuration if specified
         _modifierConfig = LoadModifierConfiguration();
         
         // Load templates
         var basePath = GetTemplatesPath();
-        var requiredTemplates = new List<(string, string)>
-        {
-            ("DTO.hbs", "DTO template"),
-            ("Validator.hbs", "Validator template"), 
-            ("Enum.hbs", "Enum template"),
-            ("Constants.hbs", "Constants template")
-        };
-
-        // Add DTORecord template if records are enabled
-        if (_options.GenerateRecords)
-        {
-            requiredTemplates.Add(("DTORecord.hbs", "DTO Record template"));
-        }
-
+        
+        // Determine which templates to load
+        var templatesToLoad = GetTemplatesToLoad();
+        
         var missingTemplates = new List<string>();
 
-        foreach (var (fileName, description) in requiredTemplates)
+        foreach (var (fileName, description) in templatesToLoad)
         {
             var templatePath = Path.Combine(basePath, fileName);
             if (!File.Exists(templatePath))
@@ -64,17 +51,82 @@ public class CodeGenerator
                 "To specify a custom template directory, use the --template-dir option.");
         }
 
-        // Load all templates
-        _dtoTemplate = File.ReadAllText(Path.Combine(basePath, "DTO.hbs"));
-        _validatorTemplate = File.ReadAllText(Path.Combine(basePath, "Validator.hbs"));
-        _enumTemplate = File.ReadAllText(Path.Combine(basePath, "Enum.hbs"));
-        _constantsTemplate = File.ReadAllText(Path.Combine(basePath, "Constants.hbs"));
-        
-        // Load record template if records are enabled
-        if (_options.GenerateRecords)
+        // Load all templates into the dictionary
+        foreach (var (fileName, description) in templatesToLoad)
         {
-            _dtoRecordTemplate = File.ReadAllText(Path.Combine(basePath, "DTORecord.hbs"));
+            var templatePath = Path.Combine(basePath, fileName);
+            var templateContent = File.ReadAllText(templatePath);
+            _templates[fileName] = ParseTemplateWithFrontmatter(templateContent);
         }
+    }
+
+    private TemplateMetadata ParseTemplateWithFrontmatter(string content)
+    {
+        var metadata = new TemplateMetadata();
+        
+        // Check if content starts with frontmatter (--- at the beginning)
+        if (content.StartsWith("---"))
+        {
+            var lines = content.Split('\n');
+            var frontmatterEnd = -1;
+            
+            // Find the end of frontmatter (second ---)
+            for (int i = 1; i < lines.Length; i++)
+            {
+                if (lines[i].Trim() == "---")
+                {
+                    frontmatterEnd = i;
+                    break;
+                }
+            }
+            
+            if (frontmatterEnd > 0)
+            {
+                // Parse frontmatter (simple key: value format)
+                for (int i = 1; i < frontmatterEnd; i++)
+                {
+                    var line = lines[i].Trim();
+                    if (string.IsNullOrEmpty(line) || line.StartsWith("#"))
+                        continue;
+                        
+                    var colonIndex = line.IndexOf(':');
+                    if (colonIndex > 0)
+                    {
+                        var key = line.Substring(0, colonIndex).Trim().ToLowerInvariant();
+                        var value = line.Substring(colonIndex + 1).Trim();
+                        
+                        // Remove quotes if present
+                        if (value.StartsWith("\"") && value.EndsWith("\""))
+                            value = value.Substring(1, value.Length - 2);
+                        
+                        switch (key)
+                        {
+                            case "extension":
+                                metadata.Extension = value;
+                                break;
+                            case "description":
+                                metadata.Description = value;
+                                break;
+                        }
+                    }
+                }
+                
+                // Extract content after frontmatter
+                metadata.Content = string.Join('\n', lines.Skip(frontmatterEnd + 1));
+            }
+            else
+            {
+                // Malformed frontmatter, use entire content
+                metadata.Content = content;
+            }
+        }
+        else
+        {
+            // No frontmatter, use entire content
+            metadata.Content = content;
+        }
+        
+        return metadata;
     }
 
     private ModifierConfiguration? LoadModifierConfiguration()
@@ -99,6 +151,34 @@ public class CodeGenerator
         return null;
     }
 
+    private List<(string fileName, string description)> GetTemplatesToLoad()
+    {
+        // If custom templates are specified, use only those
+        if (_options.CustomTemplateFiles != null && _options.CustomTemplateFiles.Count > 0)
+        {
+            return _options.CustomTemplateFiles
+                .Select(fileName => (fileName, $"Custom template: {fileName}"))
+                .ToList();
+        }
+
+        // Otherwise, use the standard templates
+        var standardTemplates = new List<(string, string)>
+        {
+            ("DTO.hbs", "DTO template"),
+            ("Validator.hbs", "Validator template"), 
+            ("Enum.hbs", "Enum template"),
+            ("Constants.hbs", "Constants template")
+        };
+
+        // Add DTORecord template if records are enabled
+        if (_options.GenerateRecords)
+        {
+            standardTemplates.Add(("DTORecord.hbs", "DTO Record template"));
+        }
+
+        return standardTemplates;
+    }
+
     /// <summary>
     /// Generates DTO classes and validators from Swagger document
     /// </summary>
@@ -119,29 +199,35 @@ public class CodeGenerator
         }
         
         // First pass: collect all enum properties and generate enum/constants types
-        if (_options.GenerateEnumTypes)
+        if (_options.GenerateEnumTypes && (_templates.ContainsKey("Enum.hbs") || _templates.ContainsKey("Constants.hbs")))
         {
             foreach (var definition in document.Definitions)
             {
                 CollectEnumTypesFromSchema(definition.Key, definition.Value, targetNamespace, document.Definitions, enumInfos, constantsInfos);
             }
             
-            // Generate enum types
-            foreach (var enumInfo in enumInfos.Values)
+            // Generate enum types only if template is available
+            if (_templates.ContainsKey("Enum.hbs"))
             {
-                var enumCode = GenerateEnum(enumInfo);
-                result.EnumTypes.Add(enumInfo.EnumName, enumCode);
+                foreach (var enumInfo in enumInfos.Values)
+                {
+                    var enumCode = GenerateEnum(enumInfo);
+                    result.EnumTypes.Add(enumInfo.EnumName, enumCode);
+                }
             }
             
-            // Generate constants classes
-            foreach (var constantsInfo in constantsInfos.Values)
+            // Generate constants classes only if template is available
+            if (_templates.ContainsKey("Constants.hbs"))
             {
-                var constantsCode = GenerateConstants(constantsInfo);
-                result.ConstantClasses.Add(constantsInfo.ClassName, constantsCode);
+                foreach (var constantsInfo in constantsInfos.Values)
+                {
+                    var constantsCode = GenerateConstants(constantsInfo);
+                    result.ConstantClasses.Add(constantsInfo.ClassName, constantsCode);
+                }
             }
         }
         
-        // Second pass: generate DTOs and validators
+        // Second pass: generate DTOs and validators based on available templates
         foreach (var definition in document.Definitions)
         {
             // Check if this class should be included based on configuration
@@ -151,13 +237,74 @@ public class CodeGenerator
             
             var classInfo = ConvertSchemaToClassInfo(definition.Key, definition.Value, targetNamespace, document.Definitions, enumInfos, constantsInfos, classPath);
             
-            // Generate DTO
-            var dtoCode = GenerateDto(classInfo);
-            result.DtoClasses.Add(definition.Key, dtoCode);
+            // Generate DTO only if template is available
+            if (_templates.ContainsKey("DTO.hbs") || _templates.ContainsKey("DTORecord.hbs"))
+            {
+                try
+                {
+                    var dtoCode = GenerateDto(classInfo);
+                    result.DtoClasses.Add(definition.Key, dtoCode);
+                }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("No DTO template available"))
+                {
+                    // Skip DTO generation if no suitable template is available
+                }
+            }
             
-            // Generate Validator
-            var validatorCode = GenerateValidator(classInfo);
-            result.Validators.Add(definition.Key, validatorCode);
+            // Generate Validator only if template is available
+            if (_templates.ContainsKey("Validator.hbs"))
+            {
+                try
+                {
+                    var validatorCode = GenerateValidator(classInfo);
+                    result.Validators.Add(definition.Key, validatorCode);
+                }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("No Validator template available"))
+                {
+                    // Skip validator generation if template is not available
+                }
+            }
+        }
+        
+        // Third pass: handle any custom templates that aren't part of the standard set
+        if (_options.CustomTemplateFiles != null && _options.CustomTemplateFiles.Count > 0)
+        {
+            var standardTemplateNames = new HashSet<string> { "DTO.hbs", "DTORecord.hbs", "Validator.hbs", "Enum.hbs", "Constants.hbs" };
+            var customTemplates = _options.CustomTemplateFiles
+                .Where(templateFile => !standardTemplateNames.Contains(templateFile))
+                .ToList();
+                
+            foreach (var customTemplate in customTemplates)
+            {
+                if (_templates.ContainsKey(customTemplate))
+                {
+                    foreach (var definition in document.Definitions)
+                    {
+                        // Check if this class should be included based on configuration
+                        var classPath = definition.Key;
+                        if (_modifierConfig != null && !_modifierConfig.IsIncluded(classPath))
+                            continue;
+                        
+                        var classInfo = ConvertSchemaToClassInfo(definition.Key, definition.Value, targetNamespace, document.Definitions, enumInfos, constantsInfos, classPath);
+                        
+                        try
+                        {
+                            var templateMetadata = _templates[customTemplate];
+                            var template = _handlebars.Compile(templateMetadata.Content);
+                            var generatedCode = template(classInfo);
+                            
+                            // Store custom template output with metadata
+                            var templateKey = $"{definition.Key}_{Path.GetFileNameWithoutExtension(customTemplate)}";
+                            var generatedFile = new GeneratedFile(generatedCode, templateMetadata.Extension);
+                            result.CustomTemplateOutput[templateKey] = generatedFile;
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new InvalidOperationException($"Error processing custom template '{customTemplate}' for class '{definition.Key}': {ex.Message}", ex);
+                        }
+                    }
+                }
+            }
         }
         
         return result;
@@ -165,33 +312,55 @@ public class CodeGenerator
 
     private string GenerateDto(ClassInfo classInfo)
     {
-        // Use record template if records are enabled
-        if (_options.GenerateRecords && _dtoRecordTemplate != null)
+        // Use record template if records are enabled and available
+        if (_options.GenerateRecords && _templates.ContainsKey("DTORecord.hbs"))
         {
-            var recordTemplate = _handlebars.Compile(_dtoRecordTemplate);
+            var recordTemplate = _handlebars.Compile(_templates["DTORecord.hbs"].Content);
             return recordTemplate(classInfo);
         }
         
-        var template = _handlebars.Compile(_dtoTemplate);
-        return template(classInfo);
+        // Use standard DTO template if available
+        if (_templates.ContainsKey("DTO.hbs"))
+        {
+            var template = _handlebars.Compile(_templates["DTO.hbs"].Content);
+            return template(classInfo);
+        }
+        
+        // If no standard DTO template is available, throw an error
+        throw new InvalidOperationException("No DTO template available for code generation. Ensure DTO.hbs or DTORecord.hbs is included in your templates.");
     }
 
     private string GenerateValidator(ClassInfo classInfo)
     {
-        var template = _handlebars.Compile(_validatorTemplate);
-        return template(classInfo);
+        if (_templates.ContainsKey("Validator.hbs"))
+        {
+            var template = _handlebars.Compile(_templates["Validator.hbs"].Content);
+            return template(classInfo);
+        }
+        
+        throw new InvalidOperationException("No Validator template available for code generation. Ensure Validator.hbs is included in your templates.");
     }
 
     private string GenerateEnum(EnumInfo enumInfo)
     {
-        var template = _handlebars.Compile(_enumTemplate);
-        return template(enumInfo);
+        if (_templates.ContainsKey("Enum.hbs"))
+        {
+            var template = _handlebars.Compile(_templates["Enum.hbs"].Content);
+            return template(enumInfo);
+        }
+        
+        throw new InvalidOperationException("No Enum template available for code generation. Ensure Enum.hbs is included in your templates.");
     }
 
     private string GenerateConstants(ConstantsInfo constantsInfo)
     {
-        var template = _handlebars.Compile(_constantsTemplate);
-        return template(constantsInfo);
+        if (_templates.ContainsKey("Constants.hbs"))
+        {
+            var template = _handlebars.Compile(_templates["Constants.hbs"].Content);
+            return template(constantsInfo);
+        }
+        
+        throw new InvalidOperationException("No Constants template available for code generation. Ensure Constants.hbs is included in your templates.");
     }
 
     private void CollectEnumTypesFromSchema(string schemaName, Schema schema, string targetNamespace, 

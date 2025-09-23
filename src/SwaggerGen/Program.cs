@@ -86,6 +86,11 @@ class Program
         var schemaDirOption = new Option<DirectoryInfo?>(
             aliases: new[] { "--schema-dir", "-s" },
             description: "Directory containing multiple JSON Schema files to process instead of a single Swagger file");
+
+        var templatesOption = new Option<string[]?>(
+            aliases: new[] { "--templates" },
+            description: "Specify custom template files to use (e.g., --templates DTO.hbs MyCustom.hbs). When specified, only these templates are processed.")
+        { AllowMultipleArgumentsPerToken = true };
             
         var generateCommand = new Command("generate", "Generate C# code from a Swagger specification")
         {
@@ -99,7 +104,8 @@ class Program
             generateRecordsOption,
             useSystemTextJsonOption,
             useSwashbuckleAttributesOption,
-            schemaDirOption
+            schemaDirOption,
+            templatesOption
         };
 
         generateCommand.SetHandler(async (context) =>
@@ -115,8 +121,9 @@ class Program
             var useSystemTextJson = context.ParseResult.GetValueForOption(useSystemTextJsonOption);
             var useSwashbuckleAttributes = context.ParseResult.GetValueForOption(useSwashbuckleAttributesOption);
             var schemaDir = context.ParseResult.GetValueForOption(schemaDirOption);
+            var templates = context.ParseResult.GetValueForOption(templatesOption);
             
-            await HandleGenerateCommand(swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir, useModern, generateRecords, useSystemTextJson, useSwashbuckleAttributes, schemaDir);
+            await HandleGenerateCommand(swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir, useModern, generateRecords, useSystemTextJson, useSwashbuckleAttributes, schemaDir, templates);
         });
 
         return generateCommand;
@@ -134,7 +141,7 @@ class Program
         return helpCommand;
     }
 
-    private static async Task HandleGenerateCommand(FileInfo? swaggerFile, FileInfo? configFile, string? namespaceOverride, DirectoryInfo? outputDir, bool skipConfirmation, DirectoryInfo? templateDir, bool useModern, bool generateRecords, bool useSystemTextJson, bool useSwashbuckleAttributes, DirectoryInfo? schemaDir)
+    private static async Task HandleGenerateCommand(FileInfo? swaggerFile, FileInfo? configFile, string? namespaceOverride, DirectoryInfo? outputDir, bool skipConfirmation, DirectoryInfo? templateDir, bool useModern, bool generateRecords, bool useSystemTextJson, bool useSwashbuckleAttributes, DirectoryInfo? schemaDir, string[]? templates)
     {
         try
         {
@@ -175,7 +182,7 @@ class Program
             }
 
             // Generate code
-            await GenerateCode(document, config, namespaceOverride, outputDir, templateDir, useModern, generateRecords, useSystemTextJson, useSwashbuckleAttributes);
+            await GenerateCode(document, config, namespaceOverride, outputDir, templateDir, useModern, generateRecords, useSystemTextJson, useSwashbuckleAttributes, templates);
 
             AnsiConsole.MarkupLine("[green]✓ Code generation completed successfully![/]");
         }
@@ -407,7 +414,7 @@ class Program
         AnsiConsole.WriteLine();
     }
 
-    private static async Task GenerateCode(SwaggerDocument document, ModifierConfiguration? config, string? namespaceOverride, DirectoryInfo? outputDir, DirectoryInfo? templateDir, bool useModern, bool generateRecords, bool useSystemTextJson, bool useSwashbuckleAttributes)
+    private static async Task GenerateCode(SwaggerDocument document, ModifierConfiguration? config, string? namespaceOverride, DirectoryInfo? outputDir, DirectoryInfo? templateDir, bool useModern, bool generateRecords, bool useSystemTextJson, bool useSwashbuckleAttributes, string[]? templates)
     {
         AnsiConsole.MarkupLine("[green]⚙️  Generating C# code...[/]");
         
@@ -430,6 +437,12 @@ class Program
         if (templateDir != null)
         {
             options.TemplateDirectory = templateDir.FullName;
+        }
+        
+        // Set custom template files if provided
+        if (templates != null && templates.Length > 0)
+        {
+            options.CustomTemplateFiles = templates.ToList();
         }
         
         // Apply namespace override if provided
@@ -474,7 +487,7 @@ class Program
 
         await progress.StartAsync(async ctx =>
         {
-            var totalFiles = result.DtoClasses.Count + result.Validators.Count;
+            var totalFiles = result.DtoClasses.Count + result.Validators.Count + result.EnumTypes.Count + result.ConstantClasses.Count + result.CustomTemplateOutput.Count;
             var task = ctx.AddTask("[green]Writing files[/]", maxValue: totalFiles);
 
             // Write DTO classes
@@ -494,9 +507,37 @@ class Program
                 task.Increment(1);
                 await Task.Delay(10); // Small delay for visual effect
             }
+
+            // Write enum types
+            foreach (var enumType in result.EnumTypes)
+            {
+                var filePath = Path.Combine(outputDir.FullName, $"{enumType.Key}.cs");
+                await File.WriteAllTextAsync(filePath, enumType.Value);
+                task.Increment(1);
+                await Task.Delay(10); // Small delay for visual effect
+            }
+
+            // Write constants classes
+            foreach (var constantClass in result.ConstantClasses)
+            {
+                var filePath = Path.Combine(outputDir.FullName, $"{constantClass.Key}.cs");
+                await File.WriteAllTextAsync(filePath, constantClass.Value);
+                task.Increment(1);
+                await Task.Delay(10); // Small delay for visual effect
+            }
+
+            // Write custom template output
+            foreach (var customOutput in result.CustomTemplateOutput)
+            {
+                var filePath = Path.Combine(outputDir.FullName, $"{customOutput.Key}.{customOutput.Value.Extension}");
+                await File.WriteAllTextAsync(filePath, customOutput.Value.Content);
+                task.Increment(1);
+                await Task.Delay(10); // Small delay for visual effect
+            }
         });
 
-        AnsiConsole.MarkupLine($"[green]✓ Generated {result.DtoClasses.Count} DTO classes and {result.Validators.Count} validators[/]");
+        var fileCount = result.DtoClasses.Count + result.Validators.Count + result.EnumTypes.Count + result.ConstantClasses.Count + result.CustomTemplateOutput.Count;
+        AnsiConsole.MarkupLine($"[green]✓ Generated {fileCount} files[/]");
     }
 
     private static void DisplayGeneratedCode(CodeGenerationResult result)
@@ -531,6 +572,60 @@ class Program
                 var panel = new Panel(Markup.Escape(validator.Value))
                 {
                     Header = new PanelHeader($"[bold]{validator.Key}Validator.cs[/]"),
+                    Border = BoxBorder.Rounded
+                };
+                AnsiConsole.Write(panel);
+                AnsiConsole.WriteLine();
+            }
+        }
+
+        // Display generated Enums
+        if (result.EnumTypes.Any())
+        {
+            AnsiConsole.Write(new Rule("[bold green]Generated Enum Types[/]"));
+            AnsiConsole.WriteLine();
+
+            foreach (var enumType in result.EnumTypes)
+            {
+                var panel = new Panel(Markup.Escape(enumType.Value))
+                {
+                    Header = new PanelHeader($"[bold]{enumType.Key}.cs[/]"),
+                    Border = BoxBorder.Rounded
+                };
+                AnsiConsole.Write(panel);
+                AnsiConsole.WriteLine();
+            }
+        }
+
+        // Display generated Constants
+        if (result.ConstantClasses.Any())
+        {
+            AnsiConsole.Write(new Rule("[bold green]Generated Constants Classes[/]"));
+            AnsiConsole.WriteLine();
+
+            foreach (var constantClass in result.ConstantClasses)
+            {
+                var panel = new Panel(Markup.Escape(constantClass.Value))
+                {
+                    Header = new PanelHeader($"[bold]{constantClass.Key}.cs[/]"),
+                    Border = BoxBorder.Rounded
+                };
+                AnsiConsole.Write(panel);
+                AnsiConsole.WriteLine();
+            }
+        }
+
+        // Display custom template output
+        if (result.CustomTemplateOutput.Any())
+        {
+            AnsiConsole.Write(new Rule("[bold green]Generated Custom Template Output[/]"));
+            AnsiConsole.WriteLine();
+
+            foreach (var customOutput in result.CustomTemplateOutput)
+            {
+                var panel = new Panel(Markup.Escape(customOutput.Value.Content))
+                {
+                    Header = new PanelHeader($"[bold]{customOutput.Key}.{customOutput.Value.Extension}[/]"),
                     Border = BoxBorder.Rounded
                 };
                 AnsiConsole.Write(panel);
@@ -576,6 +671,12 @@ class Program
             "[cyan]swaggergen generate --template-dir <dir>[/]",
             "Use custom template directory",
             "[dim]swaggergen generate --template-dir ./my-templates[/]"
+        );
+
+        helpTable.AddRow(
+            "[cyan]swaggergen generate --templates <files>[/]",
+            "Use specific template files only",
+            "[dim]swaggergen generate --templates DTO.hbs MyCustom.hbs[/]"
         );
 
         helpTable.AddRow(

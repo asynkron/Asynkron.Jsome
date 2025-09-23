@@ -24,4 +24,9 @@ public class CodeGenerationResult
     /// Generated static constant classes keyed by constants class name
     /// </summary>
     public Dictionary<string, string> ConstantClasses { get; set; } = new();
+
+    /// <summary>
+    /// Generated code from custom templates with file metadata
+    /// </summary>
+    public Dictionary<string, GeneratedFile> CustomTemplateOutput { get; set; } = new();
 }
