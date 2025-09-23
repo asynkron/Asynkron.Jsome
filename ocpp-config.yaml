@@ -1,0 +1,8 @@
+# Configuration for OCPP v1.6 DTOs
+# Adds "V16" prefix to all generated type names
+global:
+  namespace: "OCPP.V16.Generated"
+  typeNamePrefix: "V16"
+  generateEnumTypes: true
+  defaultInclude: true
+  includeDescriptions: true

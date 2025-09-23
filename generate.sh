@@ -22,7 +22,7 @@ echo
 echo "⚡ Generating OCPP v1.6 schemas..."
 dotnet run --project src/SwaggerGen -- generate \
     --schema-dir schemas/ocppv16/json_schemas \
-    --namespace OCPP.V16.Generated \
+    --config ocpp-config.yaml \
     --output generated/ocppv16 \
     --yes
 echo "✅ OCPP v1.6 generation completed"
@@ -32,7 +32,7 @@ echo
 echo "🏢 Generating Guidewire Claims..."
 dotnet run --project src/SwaggerGen -- generate \
     schemas/guidewire/claims.json \
-    --namespace Guidewire.Claims.Generated \
+    --config guidewire-config.yaml \
     --output generated/guidewire/claims \
     --yes
 echo "✅ Guidewire Claims generation completed"
