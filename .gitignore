@@ -5,6 +5,7 @@
 
 # Generated code output directory
 generated/
+custom_output/
 
 # NuGet validation artifacts
 validation-nupkg/
