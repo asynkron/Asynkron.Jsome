@@ -713,7 +713,7 @@ rules:
 """);
 
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine("[dim]For more examples, see: src/SwaggerGen/Samples/Configuration/sample-config.yaml[/]");
+        AnsiConsole.MarkupLine($"[dim]For more examples, see: {FindSampleConfigPath()}[/]");
     }
 
     /// <summary>
@@ -740,5 +740,22 @@ rules:
         }
         
         return null;
+    }
+
+    /// <summary>
+    /// Finds the sample configuration file dynamically
+    /// </summary>
+    /// <returns>The path to the sample config file if found, otherwise a relative path</returns>
+    private static string FindSampleConfigPath()
+    {
+        // Try to find the source directory first
+        var sourceDirectory = FindSourceDirectory(Directory.GetCurrentDirectory());
+        if (sourceDirectory != null)
+        {
+            return Path.Combine(sourceDirectory, "Samples", "Configuration", "sample-config.yaml");
+        }
+        
+        // Fallback to relative path
+        return "src/SwaggerGen/Samples/Configuration/sample-config.yaml";
     }
 }

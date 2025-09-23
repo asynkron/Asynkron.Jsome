@@ -67,7 +67,7 @@ Console.WriteLine(result.Validators["User"]);
 Console.WriteLine("\n3. Testing configuration file loading:");
 try
 {
-    var configPath = "src/SwaggerGen/Samples/Configuration/sample-config.yaml";
+    var configPath = FindSampleConfigPath();
     if (File.Exists(configPath))
     {
         var yamlConfig = ConfigurationLoader.Load(configPath);
@@ -89,6 +89,28 @@ try
 catch (Exception ex)
 {
     Console.WriteLine($"Error loading configuration: {ex.Message}");
+}
+
+static string FindSampleConfigPath()
+{
+    // Try to find the source directory by walking up the directory tree
+    var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+    
+    while (directory != null)
+    {
+        var srcDir = Path.Combine(directory.FullName, "src", "SwaggerGen");
+        var configPath = Path.Combine(srcDir, "Samples", "Configuration", "sample-config.yaml");
+        
+        if (File.Exists(configPath))
+        {
+            return configPath;
+        }
+        
+        directory = directory.Parent;
+    }
+    
+    // Fallback to relative path
+    return "src/SwaggerGen/Samples/Configuration/sample-config.yaml";
 }
 
 Console.WriteLine("\n4. Converting configuration to different formats:");

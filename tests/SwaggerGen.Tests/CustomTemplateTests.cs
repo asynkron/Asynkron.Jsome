@@ -229,14 +229,46 @@ type {{ClassName}} = { }";
 
     private string GetTemplatesPath()
     {
-        // Use absolute path to templates directory
-        var templatesPath = "/home/runner/work/SwaggerGen/SwaggerGen/src/SwaggerGen/Templates";
-        
-        if (!Directory.Exists(templatesPath))
+        // Use the same template discovery logic as CodeGenerator for consistency
+        // Priority 1: Development-time fallback - walk up directory tree to find source templates
+        var currentDir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (currentDir != null)
         {
-            throw new DirectoryNotFoundException($"Templates directory not found at: {templatesPath}");
+            var srcPath = Path.Combine(currentDir.FullName, "src", "SwaggerGen", "Templates");
+            if (Directory.Exists(srcPath))
+            {
+                return srcPath;
+            }
+            currentDir = currentDir.Parent;
         }
-        
-        return templatesPath;
+
+        // Priority 2: Check if templates are in the current directory (for different execution contexts)
+        if (Directory.Exists("Templates"))
+        {
+            return Path.GetFullPath("Templates");
+        }
+
+        // Priority 3: Check relative to test assembly location
+        var testAssemblyPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+        if (testAssemblyPath != null)
+        {
+            var testDir = new DirectoryInfo(testAssemblyPath);
+            while (testDir != null)
+            {
+                var srcPath = Path.Combine(testDir.FullName, "src", "SwaggerGen", "Templates");
+                if (Directory.Exists(srcPath))
+                {
+                    return srcPath;
+                }
+                testDir = testDir.Parent;
+            }
+        }
+
+        throw new DirectoryNotFoundException(
+            "Template files not found. Checked locations:\n" +
+            $"  - Source directory search from: {Directory.GetCurrentDirectory()}\n" +
+            $"  - Current directory: Templates\n" +
+            $"  - Test assembly directory search from: {testAssemblyPath}\n\n" +
+            "Ensure the test is running from a directory where src/SwaggerGen/Templates can be found by walking up the directory tree.");
     }
 }
