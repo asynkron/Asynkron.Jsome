@@ -1192,11 +1192,11 @@ public class CodeGenerator
         }
         
         // For numeric values, booleans, etc., use as-is
-        if (bool.TryParse(valueStr, out _) || 
-            decimal.TryParse(valueStr, out _) ||
+        if (bool.TryParse(valueStr, out _) ||
+            decimal.TryParse(valueStr, NumberStyles.Any, CultureInfo.InvariantCulture, out _) || 
             valueStr == "null")
         {
-            return valueStr.ToLower();
+            return valueStr.ToLowerInvariant();
         }
         
         // For everything else, treat as string and escape properly for C# string literals
