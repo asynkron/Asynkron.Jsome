@@ -1,0 +1,61 @@
+---
+extension: fs
+description: F# module with discriminated union template
+---
+namespace {{Namespace}}
+
+open System.ComponentModel.DataAnnotations
+{{#if UseSystemTextJson}}
+open System.Text.Json.Serialization
+{{else}}
+open Newtonsoft.Json
+{{/if}}
+
+/// <summary>
+/// {{Description}}
+/// </summary>
+module {{ClassName}} =
+
+    type {{ClassName}} = {
+{{#each Properties}}
+        /// <summary>
+{{#if Description}}        /// {{Description}}
+{{/if}}{{#if EnumTypeName}}        /// Uses enum type: {{EnumTypeName}}
+{{/if}}{{#if EnumValues}}        /// Allowed values: {{#each EnumValues}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+{{/if}}        /// </summary>
+        {{#if JsonPropertyName}}
+        {{#if UseSystemTextJson}}
+        [<JsonPropertyName("{{JsonPropertyName}}")>]
+        {{else}}
+        [<JsonProperty("{{JsonPropertyName}}")>]
+        {{/if}}
+        {{/if}}
+        {{#if IsRequired}}
+        [<Required>]
+        {{/if}}
+        {{#if MaxLength}}
+        [<MaxLength({{MaxLength}})>]
+        {{/if}}
+        {{Name}}: {{{Type}}} option
+{{/each}}
+    }
+
+    /// Create a new {{ClassName}} with default values
+    let create{{ClassName}} () = {
+{{#each Properties}}
+        {{Name}} = None
+{{/each}}
+    }
+
+    /// Validate {{ClassName}} instance
+    let validate (instance: {{ClassName}}) =
+        let errors = ResizeArray<string>()
+        
+{{#each Properties}}
+{{#if IsRequired}}
+        if instance.{{Name}}.IsNone then
+            errors.Add("{{Name}} is required")
+{{/if}}
+{{/each}}
+        
+        if errors.Count = 0 then Ok instance else Error (List.ofSeq errors)
