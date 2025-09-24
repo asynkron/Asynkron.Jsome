@@ -1,0 +1,43 @@
+---
+extension: fs
+description: F# record type template
+---
+namespace {{Namespace}}
+
+open System.ComponentModel.DataAnnotations
+{{#if UseSystemTextJson}}
+open System.Text.Json.Serialization
+{{else}}
+open Newtonsoft.Json
+{{/if}}
+
+/// <summary>
+/// {{Description}}
+/// </summary>
+type {{ClassName}} = {
+{{#each Properties}}
+    /// <summary>
+{{#if Description}}    /// {{Description}}
+{{/if}}{{#if EnumTypeName}}    /// Uses enum type: {{EnumTypeName}}
+{{/if}}{{#if ConstantsClassName}}    /// Allowed values defined in: {{ConstantsClassName}}
+{{/if}}{{#if EnumValues}}    /// Allowed values: {{#each EnumValues}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+{{/if}}    /// </summary>
+    {{#if JsonPropertyName}}
+    {{#if UseSystemTextJson}}
+    [<JsonPropertyName("{{JsonPropertyName}}")>]
+    {{else}}
+    [<JsonProperty("{{JsonPropertyName}}")>]
+    {{/if}}
+    {{/if}}
+    {{#if IsRequired}}
+    [<Required>]
+    {{/if}}
+    {{#if MaxLength}}
+    [<MaxLength({{MaxLength}})>]
+    {{/if}}
+    {{#if MinLength}}
+    [<MinLength({{MinLength}})>]
+    {{/if}}
+    {{Name}}: {{{Type}}}{{#if DefaultValue}} // Default: {{DefaultValue}}{{/if}}
+{{/each}}
+}

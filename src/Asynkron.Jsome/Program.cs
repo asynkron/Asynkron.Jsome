@@ -91,6 +91,10 @@ class Program
             aliases: new[] { "--templates" },
             description: "Specify custom template files to use (e.g., --templates DTO.hbs MyCustom.hbs). When specified, only these templates are processed.")
         { AllowMultipleArgumentsPerToken = true };
+
+        var generateProtoOption = new Option<bool>(
+            aliases: new[] { "--proto" },
+            description: "Generate Protocol Buffers (.proto) files in addition to C# code");
             
         var generateCommand = new Command("generate", "Generate C# code from a Swagger specification")
         {
@@ -105,7 +109,8 @@ class Program
             useSystemTextJsonOption,
             useSwashbuckleAttributesOption,
             schemaDirOption,
-            templatesOption
+            templatesOption,
+            generateProtoOption
         };
 
         generateCommand.SetHandler(async (context) =>
@@ -122,8 +127,9 @@ class Program
             var useSwashbuckleAttributes = context.ParseResult.GetValueForOption(useSwashbuckleAttributesOption);
             var schemaDir = context.ParseResult.GetValueForOption(schemaDirOption);
             var templates = context.ParseResult.GetValueForOption(templatesOption);
+            var generateProto = context.ParseResult.GetValueForOption(generateProtoOption);
             
-            await HandleGenerateCommand(swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir, useModern, generateRecords, useSystemTextJson, useSwashbuckleAttributes, schemaDir, templates);
+            await HandleGenerateCommand(swaggerFile, configFile, namespaceOverride, outputDir, skipConfirmation, templateDir, useModern, generateRecords, useSystemTextJson, useSwashbuckleAttributes, schemaDir, templates, generateProto);
         });
 
         return generateCommand;
@@ -141,7 +147,7 @@ class Program
         return helpCommand;
     }
 
-    private static async Task HandleGenerateCommand(FileInfo? swaggerFile, FileInfo? configFile, string? namespaceOverride, DirectoryInfo? outputDir, bool skipConfirmation, DirectoryInfo? templateDir, bool useModern, bool generateRecords, bool useSystemTextJson, bool useSwashbuckleAttributes, DirectoryInfo? schemaDir, string[]? templates)
+    private static async Task HandleGenerateCommand(FileInfo? swaggerFile, FileInfo? configFile, string? namespaceOverride, DirectoryInfo? outputDir, bool skipConfirmation, DirectoryInfo? templateDir, bool useModern, bool generateRecords, bool useSystemTextJson, bool useSwashbuckleAttributes, DirectoryInfo? schemaDir, string[]? templates, bool generateProto)
     {
         try
         {
@@ -182,7 +188,7 @@ class Program
             }
 
             // Generate code
-            await GenerateCode(document, config, namespaceOverride, outputDir, templateDir, useModern, generateRecords, useSystemTextJson, useSwashbuckleAttributes, templates);
+            await GenerateCode(document, config, namespaceOverride, outputDir, templateDir, useModern, generateRecords, useSystemTextJson, useSwashbuckleAttributes, templates, generateProto);
 
             AnsiConsole.MarkupLine("[green]✓ Code generation completed successfully![/]");
         }
@@ -414,7 +420,7 @@ class Program
         AnsiConsole.WriteLine();
     }
 
-    private static async Task GenerateCode(SwaggerDocument document, ModifierConfiguration? config, string? namespaceOverride, DirectoryInfo? outputDir, DirectoryInfo? templateDir, bool useModern, bool generateRecords, bool useSystemTextJson, bool useSwashbuckleAttributes, string[]? templates)
+    private static async Task GenerateCode(SwaggerDocument document, ModifierConfiguration? config, string? namespaceOverride, DirectoryInfo? outputDir, DirectoryInfo? templateDir, bool useModern, bool generateRecords, bool useSystemTextJson, bool useSwashbuckleAttributes, string[]? templates, bool generateProto)
     {
         AnsiConsole.MarkupLine("[green]⚙️  Generating C# code...[/]");
         
@@ -425,7 +431,8 @@ class Program
             UseRequiredKeyword = useModern,
             GenerateRecords = generateRecords,
             UseSystemTextJson = useSystemTextJson,
-            UseSwashbuckleAttributes = useSwashbuckleAttributes
+            UseSwashbuckleAttributes = useSwashbuckleAttributes,
+            GenerateProtoFiles = generateProto
         };
         
         if (config != null)

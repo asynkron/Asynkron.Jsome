@@ -1,0 +1,42 @@
+---
+extension: ts
+description: TypeScript interface template
+---
+/**
+ * {{Description}}
+ */
+export interface {{ClassName}} {
+{{#each Properties}}
+  /**
+{{#if Description}}   * {{Description}}
+{{/if}}{{#if EnumValues}}   * Allowed values: {{#each EnumValues}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+{{/if}}   */
+  {{#if JsonPropertyName}}"{{JsonPropertyName}}"{{else}}{{Name}}{{/if}}{{#unless IsRequired}}?{{/unless}}: {{{Type}}}{{#if DefaultValue}} // Default: {{DefaultValue}}{{/if}};
+{{/each}}
+}
+
+/**
+ * Type guard for {{ClassName}}
+ */
+export function is{{ClassName}}(obj: any): obj is {{ClassName}} {
+  if (!obj || typeof obj !== 'object') return false;
+  
+{{#each Properties}}
+{{#if IsRequired}}
+  if ({{#if JsonPropertyName}}!('{{JsonPropertyName}}' in obj){{else}}!('{{Name}}' in obj){{/if}}) return false;
+{{/if}}
+{{/each}}
+  
+  return true;
+}
+
+/**
+ * Create a new {{ClassName}} with default values
+ */
+export function create{{ClassName}}(partial: Partial<{{ClassName}}> = {}): {{ClassName}} {
+  return {
+{{#each Properties}}
+    {{#if JsonPropertyName}}"{{JsonPropertyName}}"{{else}}{{Name}}{{/if}}: partial.{{#if JsonPropertyName}}"{{JsonPropertyName}}"{{else}}{{Name}}{{/if}}{{#if DefaultValue}} ?? {{DefaultValue}}{{else}}{{#if IsRequired}} ?? null{{/if}}{{/if}},
+{{/each}}
+  };
+}
