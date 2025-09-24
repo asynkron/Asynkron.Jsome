@@ -30,13 +30,13 @@ Asynkron.Jsome is available as a .NET global tool. Install it using the followin
 
 ```bash
 # Install the global tool
-dotnet tool install -g Asynkron.Jsome
+dotnet tool install -g dotnet-jsome
 
 # Update to the latest version
-dotnet tool update -g Asynkron.Jsome
+dotnet tool update -g dotnet-jsome
 
 # Uninstall if needed
-dotnet tool uninstall -g Asynkron.Jsome
+dotnet tool uninstall -g dotnet-jsome
 ```
 
 ### Prerequisites

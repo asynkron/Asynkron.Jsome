@@ -9,7 +9,7 @@
     <!-- Global Tool Configuration -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>jsome</ToolCommandName>
-    <PackageId>Asynkron.Jsome</PackageId>
+    <PackageId>dotnet-jsome</PackageId>
     
     <!-- Package Metadata -->
     <Description>A C# code generator that processes Swagger 2.0 JSON files and JSON Schema files to produce C# DTO classes and FluentValidation validators</Description>

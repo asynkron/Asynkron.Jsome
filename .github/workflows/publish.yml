@@ -34,7 +34,7 @@ jobs:
         echo "Version: $TAG"
         
     - name: Pack
-      run: dotnet pack src/SwaggerGen/SwaggerGen.csproj --no-build --configuration Release --output ./nupkg -p:PackageVersion=${{ steps.get_version.outputs.VERSION }}
+      run: dotnet pack src/Asynkron.Jsome/Asynkron.Jsome.csproj --no-build --configuration Release --output ./nupkg -p:PackageVersion=${{ steps.get_version.outputs.VERSION }}
       
     - name: Publish to NuGet
       run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
