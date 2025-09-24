@@ -1,8 +1,8 @@
-# SwaggerGen - Copilot Instructions
+# Asynkron.Jsome - Copilot Instructions
 
 ## Project Overview
 
-SwaggerGen is a C# code generator that processes Swagger 2.0 JSON files to produce custom C# DTO (Data Transfer Object) classes and FluentValidators. The project focuses on generating clean, type-safe C# code from OpenAPI/Swagger specifications.
+Asynkron.Jsome is a C# code generator that processes Swagger 2.0 JSON files to produce custom C# DTO (Data Transfer Object) classes and FluentValidators. The project focuses on generating clean, type-safe C# code from OpenAPI/Swagger specifications.
 
 ## Key Technologies
 
@@ -51,8 +51,8 @@ The project aims to generate two primary outputs:
 
 - All parsers and generators should have comprehensive unit tests
 - Use xUnit framework with standard Arrange-Act-Assert pattern
-- Test files are located in `tests/SwaggerGen.Tests/`
-- Sample Swagger files for testing are in `src/SwaggerGen/Samples/`
+- Test files are located in `tests/Asynkron.Jsome.Tests/`
+- Sample Swagger files for testing are in `src/Asynkron.Jsome/Samples/`
 
 ### Error Handling
 
@@ -64,15 +64,15 @@ The project aims to generate two primary outputs:
 ## Project Structure
 
 ```
-SwaggerGen/
-├── src/SwaggerGen/                    # Main application
+Asynkron.Jsome/
+├── src/Asynkron.Jsome/                # Main application
 │   ├── Models/                        # Swagger document models
 │   ├── Samples/                       # Sample Swagger files
 │   ├── Program.cs                     # Console app entry point
 │   ├── SwaggerParser.cs               # Core parsing logic
-│   └── SwaggerGen.csproj              # Project file
-├── tests/SwaggerGen.Tests/            # Unit tests
-└── SwaggerGen.sln                     # Solution file
+│   └── Asynkron.Jsome.csproj          # Project file
+├── tests/Asynkron.Jsome.Tests/        # Unit tests
+└── Asynkron.Jsome.sln                 # Solution file
 ```
 
 ## Building and Running
@@ -85,7 +85,7 @@ dotnet build
 dotnet test
 
 # Run the console application
-dotnet run --project src/SwaggerGen
+dotnet run --project src/Asynkron.Jsome
 ```
 
 ## Swagger 2.0 Support
