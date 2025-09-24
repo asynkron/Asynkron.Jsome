@@ -27,7 +27,7 @@ fi
 # Check if we can create NuGet package
 echo -n "✓ Creating NuGet package... "
 rm -rf ./validation-nupkg
-if dotnet pack src/SwaggerGen/SwaggerGen.csproj --configuration Release --output ./validation-nupkg -p:PackageVersion=1.0.0-validation --verbosity quiet > /dev/null 2>&1; then
+if dotnet pack src/Asynkron.Jsome/Asynkron.Jsome.csproj --configuration Release --output ./validation-nupkg -p:PackageVersion=1.0.0-validation --verbosity quiet > /dev/null 2>&1; then
     echo "✅ PASS"
 else
     echo "❌ FAIL - Package creation failed"
@@ -36,7 +36,7 @@ fi
 
 # Check if package was created with correct name
 echo -n "✓ Verifying package file exists... "
-if ls ./validation-nupkg/dotnet-swaggergen.1.0.0-validation.nupkg > /dev/null 2>&1; then
+if ls ./validation-nupkg/dotnet-jsome.1.0.0-validation.nupkg > /dev/null 2>&1; then
     echo "✅ PASS"
 else
     echo "❌ FAIL - Package file not found"
@@ -47,12 +47,12 @@ fi
 echo -n "✓ Verifying package contents... "
 # Extract package to check contents
 mkdir -p ./validation-extract
-unzip -q ./validation-nupkg/dotnet-swaggergen.1.0.0-validation.nupkg -d ./validation-extract
+unzip -q ./validation-nupkg/dotnet-jsome.1.0.0-validation.nupkg -d ./validation-extract
 
 # Check for key files
 missing_files=()
-if [ ! -f "./validation-extract/tools/net8.0/any/SwaggerGen.dll" ]; then
-    missing_files+=("SwaggerGen.dll")
+if [ ! -f "./validation-extract/tools/net8.0/any/Asynkron.Jsome.dll" ]; then
+    missing_files+=("Asynkron.Jsome.dll")
 fi
 if [ ! -f "./validation-extract/README.md" ]; then
     missing_files+=("README.md")
