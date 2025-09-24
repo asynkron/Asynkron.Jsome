@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
+    <!-- Global Tool Configuration -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>jsome</ToolCommandName>
+    <PackageId>Asynkron.Jsome</PackageId>
+    
+    <!-- Package Metadata -->
+    <Description>A C# code generator that processes Swagger 2.0 JSON files and JSON Schema files to produce C# DTO classes and FluentValidation validators</Description>
+    <PackageTags>swagger;openapi;codegen;dto;fluentvalidation;dotnet-tool;jsonschema</PackageTags>
+    <PackageProjectUrl>https://github.com/asynkron/Asynkron.Jsome</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/asynkron/Asynkron.Jsome</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Authors>asynkron</Authors>
+    <Company>asynkron</Company>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="Handlebars.Net" Version="2.1.6" />
+    <PackageReference Include="FluentValidation" Version="11.9.0" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+    <PackageReference Include="Spectre.Console" Version="0.48.0" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="README.md" />
+    <None Include="Templates\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Templates\**\*">
+      <PackagePath>contentFiles/any/any/Templates/%(RecursiveDir)%(Filename)%(Extension)</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+  </ItemGroup>
+
+</Project>

@@ -1,4 +1,4 @@
-# SwaggerGen
+# Asynkron.Jsome
 
 A C# code generator that processes Swagger 2.0 JSON files and JSON Schema directories to produce C# DTO (Data Transfer Object) classes and FluentValidation validators. The project focuses on generating clean, type-safe C# code from OpenAPI/Swagger specifications and vanilla JSON Schemas with powerful configuration options for controlling the object graph generation.
 
@@ -26,17 +26,17 @@ A C# code generator that processes Swagger 2.0 JSON files and JSON Schema direct
 
 ## Installation
 
-SwaggerGen is available as a .NET global tool. Install it using the following command:
+Asynkron.Jsome is available as a .NET global tool. Install it using the following command:
 
 ```bash
 # Install the global tool
-dotnet tool install -g dotnet-swaggergen
+dotnet tool install -g Asynkron.Jsome
 
 # Update to the latest version
-dotnet tool update -g dotnet-swaggergen
+dotnet tool update -g Asynkron.Jsome
 
 # Uninstall if needed
-dotnet tool uninstall -g dotnet-swaggergen
+dotnet tool uninstall -g Asynkron.Jsome
 ```
 
 ### Prerequisites
@@ -45,25 +45,25 @@ dotnet tool uninstall -g dotnet-swaggergen
 
 ## Usage
 
-After installation, use the `swaggergen` command from anywhere in your terminal:
+After installation, use the `jsome` command from anywhere in your terminal:
 
 #### Default Usage (Petstore Sample)
 
 ```bash
-swaggergen
+jsome
 ```
 
 #### With Custom Swagger File
 
 ```bash
 # Use a relative path
-swaggergen my-api-spec.json
+jsome my-api-spec.json
 
 # Use an absolute path  
-swaggergen /path/to/swagger.json
+jsome /path/to/swagger.json
 
 # Use a remote URL
-swaggergen https://petstore.swagger.io/v2/swagger.json
+jsome https://petstore.swagger.io/v2/swagger.json
 ```
 
 #### With JSON Schema Directory (New!)
@@ -72,19 +72,19 @@ SwaggerGen now supports generating DTOs from multiple JSON Schema files in a dir
 
 ```bash
 # Generate from all JSON Schema files in a directory
-swaggergen generate --schema-dir /path/to/schemas
+jsome generate --schema-dir /path/to/schemas
 
 # With custom namespace and output directory
-swaggergen generate --schema-dir ./schemas --namespace MyProject.Generated --output ./generated
+jsome generate --schema-dir ./schemas --namespace MyProject.Generated --output ./generated
 
 # Real-world example with OCPP 1.6 schemas
-swaggergen generate --schema-dir ./schemas/ocppv16/json_schemas --namespace OCPP.V16.Generated --output ./src/Generated
+jsome generate --schema-dir ./schemas/ocppv16/json_schemas --namespace OCPP.V16.Generated --output ./src/Generated
 ```
 
 #### Command Line Options
 
 ```
-Usage: swaggergen generate [options] [swagger-file-path]
+Usage: jsome generate [options] [swagger-file-path]
 
 Arguments:
   swagger-file-path                     Path to a Swagger 2.0 JSON file (optional)
@@ -103,12 +103,12 @@ Options:
   -h, --help                           Show help information
 
 Examples:
-  swaggergen generate
-  swaggergen generate petstore-swagger.json
-  swaggergen generate /path/to/my-api.json
-  swaggergen generate --schema-dir ./json-schemas --namespace MyApi.Generated
-  swaggergen generate --config config.yaml --output ./generated --modern
-  swaggergen generate petstore-swagger.json --swashbuckle-attributes --output ./generated
+  jsome generate
+  jsome generate petstore-swagger.json
+  jsome generate /path/to/my-api.json
+  jsome generate --schema-dir ./json-schemas --namespace MyApi.Generated
+  jsome generate --config config.yaml --output ./generated --modern
+  jsome generate petstore-swagger.json --swashbuckle-attributes --output ./generated
 ```
 
 ### JSON Schema Directory Features
@@ -362,7 +362,7 @@ SwaggerGen supports modern C# language features that enable cleaner, more expres
 Use the `--modern` flag to enable nullable reference types and the `required` keyword:
 
 ```bash
-swaggergen generate my-api.json --output ./Generated --modern
+jsome generate my-api.json --output ./Generated --modern
 ```
 
 **Traditional approach (default):**
@@ -391,7 +391,7 @@ public class User
 Generate immutable records using the `--records` flag:
 
 ```bash
-swaggergen generate my-api.json --output ./Generated --modern --records
+jsome generate my-api.json --output ./Generated --modern --records
 ```
 
 **Generated C# record:**
@@ -419,16 +419,16 @@ public record User(
 
 ```bash
 # Generate traditional classes (default)
-swaggergen generate api.json --output ./Generated
+jsome generate api.json --output ./Generated
 
 # Generate modern classes with nullable types and required keyword
-swaggergen generate api.json --output ./Generated --modern
+jsome generate api.json --output ./Generated --modern
 
 # Generate modern records
-swaggergen generate api.json --output ./Generated --modern --records
+jsome generate api.json --output ./Generated --modern --records
 
 # View all available options
-swaggergen generate --help
+jsome generate --help
 ```
 
 ## Swashbuckle Attributes Support
@@ -440,7 +440,7 @@ SwaggerGen can generate **Swashbuckle.AspNetCore.Annotations** attributes alongs
 Enable Swashbuckle attributes generation with the `--swashbuckle-attributes` flag:
 
 ```bash
-swaggergen generate petstore-swagger.json --swashbuckle-attributes
+jsome generate petstore-swagger.json --swashbuckle-attributes
 ```
 
 ### Generated Attributes
@@ -508,13 +508,13 @@ Swashbuckle attributes work alongside all other SwaggerGen features:
 
 ```bash
 # Combine with modern C# features
-swaggergen generate api.json --swashbuckle-attributes --modern
+jsome generate api.json --swashbuckle-attributes --modern
 
 # Combine with System.Text.Json
-swaggergen generate api.json --swashbuckle-attributes --system-text-json
+jsome generate api.json --swashbuckle-attributes --system-text-json
 
 # Combine with records
-swaggergen generate api.json --swashbuckle-attributes --modern --records
+jsome generate api.json --swashbuckle-attributes --modern --records
 ```
 
 **Note:** Swashbuckle attributes are generated *in addition to* existing DataAnnotations, ensuring backward compatibility.
@@ -662,7 +662,7 @@ This project uses automated NuGet publishing via GitHub Actions. To publish a ne
      - Create a NuGet package with the version from the tag
      - Publish to NuGet.org
    - Check the Actions tab to monitor progress
-   - The package will be available at: https://www.nuget.org/packages/dotnet-swaggergen/
+   - The package will be available at: https://www.nuget.org/packages/dotnet-jsome/
 
 ### Versioning
 
