@@ -100,6 +100,8 @@ Options:
   --records                            Generate C# records instead of classes for DTOs
   --system-text-json                   Use System.Text.Json attributes instead of Newtonsoft.Json
   --swashbuckle-attributes             Generate Swashbuckle.AspNetCore.Annotations attributes
+  --proto                              Generate Protocol Buffers (.proto) files in addition to C# code
+  --templates                          Specify custom template files to use (e.g., --templates DTO.hbs MyCustom.hbs)
   -h, --help                           Show help information
 
 Examples:
@@ -109,7 +111,408 @@ Examples:
   jsome generate --schema-dir ./json-schemas --namespace MyApi.Generated
   jsome generate --config config.yaml --output ./generated --modern
   jsome generate petstore-swagger.json --swashbuckle-attributes --output ./generated
+  jsome generate --proto --output ./generated --namespace MyProtos
 ```
+
+## Protocol Buffers (.proto) Generation
+
+Asynkron.Jsome can generate Protocol Buffers definitions alongside C# code, enabling cross-language compatibility and efficient serialization.
+
+### Usage
+
+Enable Protocol Buffers generation with the `--proto` flag:
+
+```bash
+# Generate both C# and .proto files
+jsome generate my-api.json --proto --output ./generated
+
+# Generate only .proto files using custom templates
+jsome generate my-api.json --templates proto.hbs proto.enum.hbs --output ./generated
+```
+
+### Generated Protocol Buffers Output
+
+For each Swagger definition, Asynkron.Jsome generates corresponding `.proto` files:
+
+**Input Swagger Schema:**
+```json
+{
+  "User": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "format": "int64",
+        "description": "User ID"
+      },
+      "name": {
+        "type": "string",
+        "description": "User name"
+      },
+      "email": {
+        "type": "string",
+        "format": "email"
+      },
+      "isActive": {
+        "type": "boolean",
+        "description": "User status"
+      }
+    },
+    "required": ["id", "name"]
+  }
+}
+```
+
+**Generated Protocol Buffers (.proto):**
+```protobuf
+syntax = "proto3";
+
+// User definition
+message User {
+  // User ID
+  int64 id = 1;
+  // User name  
+  string name = 2;
+  // 
+  string email = 3;
+  // User status
+  bool is_active = 4;
+}
+```
+
+### Protocol Buffers Features
+
+- **Automatic Type Mapping**: Converts C# types to appropriate Protocol Buffers types
+- **Field Numbering**: Sequential field numbering starting from 1
+- **Snake Case Conversion**: Converts C# property names to snake_case for proto compatibility
+- **Enum Support**: Generates proto enums with required UNSPECIFIED values
+- **Comments Preservation**: Maintains descriptions from Swagger schemas
+
+### Type Mapping
+
+| Swagger Type | C# Type | Protocol Buffers Type |
+|--------------|---------|----------------------|
+| `string` | `string` | `string` |
+| `integer` | `int` | `int32` |
+| `integer` (int64) | `long` | `int64` |
+| `number` | `double` | `double` |
+| `number` (float) | `float` | `float` |
+| `boolean` | `bool` | `bool` |
+| `array` | `List<T>` | `repeated T` |
+
+## F# Code Generation
+
+Generate F# record types and modules from your Swagger specifications using custom Handlebars templates.
+
+### F# Record Templates
+
+Create F# record types with validation attributes:
+
+**Template: `FSharp.hbs`**
+```handlebars
+---
+extension: fs
+description: F# record type template
+---
+namespace {{Namespace}}
+
+open System.ComponentModel.DataAnnotations
+{{#if UseSystemTextJson}}
+open System.Text.Json.Serialization
+{{else}}
+open Newtonsoft.Json
+{{/if}}
+
+/// <summary>
+/// {{Description}}
+/// </summary>
+type {{ClassName}} = {
+{{#each Properties}}
+    /// <summary>
+    /// {{Description}}
+    /// </summary>
+    {{#if JsonPropertyName}}
+    {{#if UseSystemTextJson}}
+    [<JsonPropertyName("{{JsonPropertyName}}")>]
+    {{else}}
+    [<JsonProperty("{{JsonPropertyName}}")>]
+    {{/if}}
+    {{/if}}
+    {{#if IsRequired}}
+    [<Required>]
+    {{/if}}
+    {{Name}}: {{{Type}}}
+{{/each}}
+}
+```
+
+**Usage:**
+```bash
+# Generate F# record types
+jsome generate my-api.json --templates FSharp.hbs --output ./generated
+
+# Generate F# with System.Text.Json support
+jsome generate my-api.json --templates FSharp.hbs --system-text-json --output ./generated
+```
+
+**Generated F# Output:**
+```fsharp
+namespace Generated
+
+open System.ComponentModel.DataAnnotations
+open Newtonsoft.Json
+
+/// <summary>
+/// User definition
+/// </summary>
+type User = {
+    /// <summary>
+    /// User ID
+    /// </summary>
+    [<JsonProperty("id")>]
+    [<Required>]
+    Id: int64
+    /// <summary>
+    /// User name
+    /// </summary>
+    [<JsonProperty("name")>]
+    [<Required>]
+    Name: string
+    /// <summary>
+    /// </summary>
+    [<JsonProperty("email")>]
+    Email: string
+}
+```
+
+### F# Module Templates
+
+Generate F# modules with validation functions:
+
+**Template: `FSharpModule.hbs`**
+```handlebars
+---
+extension: fs
+description: F# module with validation template
+---
+namespace {{Namespace}}
+
+/// <summary>
+/// {{Description}}
+/// </summary>
+module {{ClassName}} =
+
+    type {{ClassName}} = {
+{{#each Properties}}
+        {{Name}}: {{{Type}}} option
+{{/each}}
+    }
+
+    /// Create a new {{ClassName}} with default values
+    let create{{ClassName}} () = {
+{{#each Properties}}
+        {{Name}} = None
+{{/each}}
+    }
+
+    /// Validate {{ClassName}} instance
+    let validate (instance: {{ClassName}}) =
+        let errors = ResizeArray<string>()
+        
+{{#each Properties}}
+{{#if IsRequired}}
+        if instance.{{Name}}.IsNone then
+            errors.Add("{{Name}} is required")
+{{/if}}
+{{/each}}
+        
+        if errors.Count = 0 then Ok instance else Error (List.ofSeq errors)
+```
+
+**Generated F# Module:**
+```fsharp
+namespace Generated
+
+/// <summary>
+/// User definition
+/// </summary>
+module User =
+
+    type User = {
+        Id: int64 option
+        Name: string option
+        Email: string option
+    }
+
+    /// Create a new User with default values
+    let createUser () = {
+        Id = None
+        Name = None
+        Email = None
+    }
+
+    /// Validate User instance
+    let validate (instance: User) =
+        let errors = ResizeArray<string>()
+        
+        if instance.Id.IsNone then
+            errors.Add("Id is required")
+        if instance.Name.IsNone then
+            errors.Add("Name is required")
+        
+        if errors.Count = 0 then Ok instance else Error (List.ofSeq errors)
+```
+
+## Handlebars Template System
+
+Asynkron.Jsome uses Handlebars.NET for powerful, flexible code generation with custom templates.
+
+### Template Structure
+
+Templates support frontmatter for metadata and configuration:
+
+```handlebars
+---
+extension: fs
+description: F# record type template
+---
+{{! Template content goes here }}
+namespace {{Namespace}}
+
+type {{ClassName}} = {
+{{#each Properties}}
+    {{Name}}: {{{Type}}}
+{{/each}}
+}
+```
+
+### Frontmatter Options
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `extension` | File extension for generated files | `cs` |
+| `description` | Template description | None |
+
+### Available Handlebars Helpers
+
+Asynkron.Jsome provides custom Handlebars helpers for advanced code generation:
+
+#### `{{add}}`
+Adds two numbers together (useful for field numbering):
+```handlebars
+{{! Generates field numbers starting from 1 }}
+{{proto_type Type}} {{snake_case Name}} = {{add @index 1}};
+```
+
+#### `{{snake_case}}`
+Converts strings to snake_case format:
+```handlebars
+{{! Converts "MyPropertyName" to "my_property_name" }}
+{{snake_case PropertyName}}
+```
+
+#### `{{proto_type}}`
+Converts C# types to Protocol Buffers types:
+```handlebars
+{{! Converts "int" to "int32", "long" to "int64", etc. }}
+{{proto_type Type}} {{snake_case Name}} = {{add @index 1}};
+```
+
+### Template Context Variables
+
+Templates have access to rich context data:
+
+#### Global Context
+- `{{Namespace}}` - Target namespace
+- `{{ClassName}}` - Current class name
+- `{{Description}}` - Class description
+
+#### Property Context (within `{{#each Properties}}`)
+- `{{Name}}` - Property name
+- `{{Type}}` - Property type (raw)
+- `{{{Type}}}` - Property type (unescaped for generics)
+- `{{Description}}` - Property description
+- `{{JsonPropertyName}}` - JSON property name
+- `{{IsRequired}}` - Whether property is required
+- `{{DefaultValue}}` - Default value if any
+- `{{MaxLength}}` - Maximum length constraint
+- `{{MinLength}}` - Minimum length constraint
+- `{{EnumValues}}` - Array of enum values (if applicable)
+- `{{EnumTypeName}}` - Enum type name (if applicable)
+- `{{ConstantsClassName}}` - Constants class name (if applicable)
+
+#### Conditional Flags
+- `{{UseSystemTextJson}}` - Whether to use System.Text.Json
+- `{{UseSwashbuckleAttributes}}` - Whether to include Swashbuckle attributes
+- `{{UseRequiredKeyword}}` - Whether to use C# `required` keyword
+- `{{UseNullableReferenceTypes}}` - Whether to use nullable reference types
+
+### Custom Template Development
+
+Create your own templates for any target language or framework:
+
+1. **Create Template File** (e.g., `MyCustom.hbs`):
+```handlebars
+---
+extension: kt
+description: Kotlin data class template
+---
+package {{Namespace}}
+
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+
+/**
+ * {{Description}}
+ */
+@Serializable
+data class {{ClassName}}(
+{{#each Properties}}
+    @SerialName("{{JsonPropertyName}}")
+    val {{Name}}: {{Type}}{{#if DefaultValue}} = {{DefaultValue}}{{/if}}{{#unless @last}},{{/unless}}
+{{/each}}
+)
+```
+
+2. **Use Custom Template**:
+```bash
+jsome generate my-api.json --templates MyCustom.hbs --output ./generated
+```
+
+### Template Discovery
+
+Templates are discovered in the following order:
+
+1. **Custom Template Directory** (`--template-dir` option)
+2. **Current Working Directory**
+3. **Built-in Templates** (embedded in the application)
+
+### Built-in Templates
+
+Asynkron.Jsome includes these built-in templates:
+
+| Template | Description | Extension |
+|----------|-------------|-----------|
+| `DTO.hbs` | C# class template | `.cs` |
+| `DTORecord.hbs` | C# record template | `.cs` |
+| `Validator.hbs` | FluentValidation validator | `.cs` |
+| `Enum.hbs` | C# enum template | `.cs` |
+| `Constants.hbs` | C# constants class | `.cs` |
+| `proto.hbs` | Protocol Buffers message | `.proto` |
+| `proto.enum.hbs` | Protocol Buffers enum | `.proto` |
+| `proto.string_enum.hbs` | Protocol Buffers string enum | `.proto` |
+
+### Example Templates
+
+The repository includes example templates for other languages:
+
+| Template | Description | Language |
+|----------|-------------|----------|
+| `FSharp.hbs` | F# record types | F# |
+| `FSharpModule.hbs` | F# modules with validation | F# |
+| `TypeScript.hbs` | TypeScript interfaces | TypeScript |
+
+These templates demonstrate the flexibility of the Handlebars system and can be used as starting points for your own custom templates.
 
 ### JSON Schema Directory Features
 
