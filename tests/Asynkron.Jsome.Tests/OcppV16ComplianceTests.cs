@@ -383,4 +383,98 @@ public class OcppV16ComplianceTests
         // Should reference properly typed nested classes
         Assert.True(result.DtoClasses.Count >= 4); // Main class + 3 nested classes minimum
     }
+
+    [Fact]
+    public void OcppMessages_SupportSystemTextJson_WithProperAttributes()
+    {
+        // Arrange - Test System.Text.Json compatibility for OCPP messages
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["BootNotificationRequest"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["chargePointVendor"] = new Schema { Type = "string", MaxLength = 20 },
+                        ["chargePointModel"] = new Schema { Type = "string", MaxLength = 20 },
+                        ["firmwareVersion"] = new Schema { Type = "string", MaxLength = 50 }
+                    },
+                    Required = new List<string> { "chargePointVendor", "chargePointModel" }
+                }
+            }
+        };
+
+        var options = new CodeGenerationOptions
+        {
+            UseSystemTextJson = true
+        };
+        var generator = new CodeGenerator(options);
+
+        // Act
+        var result = generator.GenerateCode(document, "OCPP.V16.Generated");
+
+        // Assert
+        var dto = result.DtoClasses["BootNotificationRequest"];
+        
+        // Should use System.Text.Json attributes
+        Assert.Contains("using System.Text.Json.Serialization;", dto);
+        Assert.DoesNotContain("using Newtonsoft.Json;", dto);
+        
+        // Required fields should have JsonIgnore(Condition = Never)
+        Assert.Contains("[JsonIgnore(Condition = JsonIgnoreCondition.Never)]", dto);
+        
+        // Optional fields should have JsonIgnore(Condition = WhenWritingDefault)  
+        Assert.Contains("[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]", dto);
+        
+        // Should have JsonPropertyName attributes
+        Assert.Contains("[JsonPropertyName(", dto);
+    }
+
+    [Fact]
+    public void OcppRoundtripSerialization_WorksCorrectly_WithGeneratedClasses()
+    {
+        // Arrange - Test that generated OCPP classes can roundtrip serialize correctly
+        var document = new SwaggerDocument
+        {
+            Definitions = new Dictionary<string, Schema>
+            {
+                ["DataTransferResponse"] = new Schema
+                {
+                    Type = "object",
+                    Properties = new Dictionary<string, Schema>
+                    {
+                        ["status"] = new Schema 
+                        { 
+                            Type = "string",
+                            Enum = new List<object> { "Accepted", "Rejected", "UnknownMessageId", "UnknownVendorId" }
+                        },
+                        ["data"] = new Schema { Type = "string" }
+                    },
+                    Required = new List<string> { "status" }
+                }
+            }
+        };
+
+        var generator = new CodeGenerator();
+
+        // Act
+        var result = generator.GenerateCode(document, "OCPP.V16.Generated");
+
+        // Assert - Verify the structure supports proper serialization
+        var dto = result.DtoClasses["DataTransferResponse"];
+        
+        // Should have proper JSON property mapping
+        Assert.Contains("[JsonProperty(\"status\")]", dto);
+        Assert.Contains("[JsonProperty(\"data\")]", dto);
+        
+        // Should have validation attributes for serialization constraints
+        Assert.Contains("[Required]", dto);
+        
+        // Validator should enforce OCPP enum constraints
+        var validator = result.Validators["DataTransferResponse"];
+        Assert.Contains("Accepted", validator);
+        Assert.Contains("UnknownVendorId", validator);
+    }
 }
