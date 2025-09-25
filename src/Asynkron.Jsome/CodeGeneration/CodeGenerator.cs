@@ -201,6 +201,7 @@ public class CodeGenerator
         var result = new CodeGenerationResult();
         var enumInfos = new Dictionary<string, EnumInfo>();
         var constantsInfos = new Dictionary<string, ConstantsInfo>();
+        var allDefinitions = new Dictionary<string, Schema>(document.Definitions);
         
         // Apply global configuration settings
         if (_modifierConfig?.Global != null)
@@ -209,12 +210,15 @@ public class CodeGenerator
                 targetNamespace = _modifierConfig.Global.Namespace;
         }
         
+        // Pre-process to extract inline nested objects and add them as definitions
+        ExtractInlineNestedObjects(allDefinitions);
+        
         // First pass: collect all enum properties and generate enum/constants types
         if (_options.GenerateEnumTypes && (_templates.ContainsKey("Enum.hbs") || _templates.ContainsKey("Constants.hbs")))
         {
-            foreach (var definition in document.Definitions)
+            foreach (var definition in allDefinitions)
             {
-                CollectEnumTypesFromSchema(definition.Key, definition.Value, targetNamespace, document.Definitions, enumInfos, constantsInfos);
+                CollectEnumTypesFromSchema(definition.Key, definition.Value, targetNamespace, allDefinitions, enumInfos, constantsInfos);
             }
             
             // Generate enum types only if template is available
@@ -239,14 +243,14 @@ public class CodeGenerator
         }
         
         // Second pass: generate DTOs and validators based on available templates
-        foreach (var definition in document.Definitions)
+        foreach (var definition in allDefinitions)
         {
             // Check if this class should be included based on configuration
             var classPath = definition.Key;
             if (_modifierConfig != null && !_modifierConfig.IsIncluded(classPath))
                 continue;
             
-            var classInfo = ConvertSchemaToClassInfo(definition.Key, definition.Value, targetNamespace, document.Definitions, enumInfos, constantsInfos, classPath);
+            var classInfo = ConvertSchemaToClassInfo(definition.Key, definition.Value, targetNamespace, allDefinitions, enumInfos, constantsInfos, classPath);
             
             // Generate DTO only if template is available
             if (_templates.ContainsKey("DTO.hbs") || _templates.ContainsKey("DTORecord.hbs"))
@@ -1114,7 +1118,7 @@ public class CodeGenerator
             "string" => schema.Format == "date-time" ? "DateTime" : "string",
             "boolean" => "bool",
             "array" => $"List<{MapSwaggerTypeToCSharpType(schema.Items ?? new Schema { Type = "object" })}>",
-            "object" => "object",
+            "object" => MapObjectTypeToCSharpType(schema),
             _ => "object"
         };
 
@@ -1135,6 +1139,106 @@ public class CodeGenerator
         }
 
         return baseType;
+    }
+
+    private string MapObjectTypeToCSharpType(Schema schema)
+    {
+        // If it has a $ref, it should be handled by the main logic
+        if (!string.IsNullOrEmpty(schema.Ref))
+        {
+            var refName = schema.Ref.Replace("#/definitions/", "");
+            return ApplyTypeNameFormatting(refName);
+        }
+        
+        // If it's a simple object with no properties defined, use object
+        if (schema.Properties == null || schema.Properties.Count == 0)
+        {
+            return "object";
+        }
+
+        // For objects with properties, after our pre-processing, they should have been converted to $ref
+        // If we reach here, it means the extraction didn't work - fall back to object
+        return "object";
+    }
+
+    /// <summary>
+    /// Extracts inline nested objects from array items and properties, creating separate definitions for them
+    /// </summary>
+    private void ExtractInlineNestedObjects(Dictionary<string, Schema> allDefinitions)
+    {
+        var newDefinitions = new Dictionary<string, Schema>();
+        
+        foreach (var definition in allDefinitions.ToList())
+        {
+            ExtractNestedObjectsFromSchema(definition.Key, definition.Value, newDefinitions);
+        }
+        
+        // Add new definitions to the main collection
+        foreach (var newDef in newDefinitions)
+        {
+            if (!allDefinitions.ContainsKey(newDef.Key))
+            {
+                allDefinitions[newDef.Key] = newDef.Value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Recursively extracts nested objects from a schema and creates separate definitions
+    /// </summary>
+    private void ExtractNestedObjectsFromSchema(string baseName, Schema schema, Dictionary<string, Schema> newDefinitions)
+    {
+        if (schema?.Properties != null)
+        {
+            foreach (var property in schema.Properties.ToList())
+            {
+                ExtractNestedObjectsFromProperty(baseName, property.Key, property.Value, newDefinitions, schema);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Extracts nested objects from a property, handling arrays and inline objects
+    /// </summary>
+    private void ExtractNestedObjectsFromProperty(string baseName, string propertyName, Schema propertySchema, Dictionary<string, Schema> newDefinitions, Schema parentSchema)
+    {
+        if (propertySchema == null) return;
+
+        // Handle array items with inline objects
+        if (propertySchema.Type == "array" && propertySchema.Items != null)
+        {
+            var itemSchema = propertySchema.Items;
+            if (itemSchema.Type == "object" && itemSchema.Properties != null && itemSchema.Properties.Count > 0)
+            {
+                // Generate a class name for the array item
+                var itemClassName = $"{ToPascalCase(baseName)}{ToPascalCase(propertyName)}Item";
+                
+                // Create a new definition for this nested object
+                newDefinitions[itemClassName] = itemSchema;
+                
+                // Update the array to reference the new definition
+                propertySchema.Items = new Schema { Ref = $"#/definitions/{itemClassName}" };
+                
+                // Recursively extract from the nested object
+                ExtractNestedObjectsFromSchema(itemClassName, itemSchema, newDefinitions);
+            }
+        }
+        // Handle direct inline objects
+        else if (propertySchema.Type == "object" && propertySchema.Properties != null && propertySchema.Properties.Count > 0)
+        {
+            // Generate a class name for the inline object
+            var objectClassName = $"{ToPascalCase(baseName)}{ToPascalCase(propertyName)}";
+            
+            // Create a new definition for this nested object
+            newDefinitions[objectClassName] = propertySchema;
+            
+            // Update the parent schema to reference the new definition
+            var newPropertySchema = new Schema { Ref = $"#/definitions/{objectClassName}" };
+            parentSchema.Properties[propertyName] = newPropertySchema;
+            
+            // Recursively extract from the nested object
+            ExtractNestedObjectsFromSchema(objectClassName, propertySchema, newDefinitions);
+        }
     }
 
     private string ToPascalCase(string input)
