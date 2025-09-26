@@ -3,7 +3,10 @@ name: Publish NuGet Package
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*'          # Semantic versioning with v prefix (e.g., v1.0.0)
+      - '[0-9]+.[0-9]+.[0-9]+*'  # Numeric versioning (e.g., 1.0.0, 0.0.2)
+  release:
+    types: [published]  # Trigger when a release is published as backup
 
 jobs:
   publish:
@@ -29,9 +32,17 @@ jobs:
     - name: Extract version from tag
       id: get_version
       run: |
-        TAG=${GITHUB_REF#refs/tags/v}
-        echo "VERSION=$TAG" >> $GITHUB_OUTPUT
-        echo "Version: $TAG"
+        if [ "${{ github.event_name }}" = "release" ]; then
+          # For release events, use the release tag name
+          TAG="${{ github.event.release.tag_name }}"
+        else
+          # For push events, extract from GITHUB_REF
+          TAG=${GITHUB_REF#refs/tags/}
+        fi
+        # Remove 'v' prefix if present (e.g., v1.0.0 -> 1.0.0)
+        VERSION=${TAG#v}
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Extracted version: $VERSION from tag: $TAG (event: ${{ github.event_name }})"
         
     - name: Pack
       run: dotnet pack src/Asynkron.Jsome/Asynkron.Jsome.csproj --no-build --configuration Release --output ./nupkg -p:PackageVersion=${{ steps.get_version.outputs.VERSION }}
