@@ -1,15 +1,32 @@
 # Code Generation Layer
 
-This folder contains the transformation pipeline that converts `SwaggerDocument` models into strongly-typed output using Handlebars templates. Think of it as the "activity function" layer compared to Azure Durable Functions—the orchestrator (`Program.cs`) supplies the input, these classes perform the heavy lifting, and templates act like Durable output bindings.
+This folder contains the transformation pipeline that converts `SwaggerDocument` models into strongly-typed output using
+Handlebars templates. Think of it as the Durable Functions "activity" stage: the orchestrator (`Program.cs`) supplies the inputs,
+these classes compute the payloads, and the templates act like output bindings that persist the work.
 
-## Key Types
-- `CodeGenerator` — Loads templates, registers helper functions, enforces template availability, and materializes DTOs, validators, enums, constants, and optional Protocol Buffer artifacts according to `CodeGenerationOptions`.
-- `CodeGenerationOptions` — Feature toggles for enum generation, modern C# (nullable + `required` keyword), System.Text.Json, Swashbuckle annotations, record types, proto files, and custom template selection.
-- `CodeGenerationResult` / `GeneratedFile` — Data holders for generated source; results aggregate per-entity artifacts while `GeneratedFile` tracks extension metadata extracted from template frontmatter.
-- `ClassInfo`, `PropertyInfo`, `EnumInfo`, `ConstantsInfo` — Template-ready view models capturing schema descriptions, validation metadata, enum values, and optional references to dedicated enum/constant types.
+## Core Components
+- `CodeGenerator` — Loads template files (respecting custom directories or curated template lists), registers helpers, merges in
+  optional modifier configuration, and produces `CodeGenerationResult`. Handles proto feature toggles, template frontmatter
+  parsing, and missing-template diagnostics surfaced to the CLI.
+- `CodeGenerationOptions` — Feature flags toggled by CLI switches (nullable/required support, record DTOs, System.Text.Json vs.
+  Newtonsoft.Json, Swashbuckle annotations, proto generation, template overrides, modifier configuration location).
+- `CodeGenerationResult` / `GeneratedFile` — Aggregates the emitted artifacts and captures metadata such as output path, logical
+  name, file extension (from `TemplateMetadata`), and contents.
 
-## Supporting Concepts
-- `TemplateMetadata` reads optional YAML-style frontmatter from `.hbs` files, similar to how Durable Functions use trigger metadata to customize behavior.
-- Validation rule constructs mirror FluentValidation DSL calls so templates can enumerate them consistently.
+## Template View Models
+- `ClassInfo` — Represents a generated DTO, including namespace, type name, base types (`allOf`), required properties, enum/const
+  dependencies, and validator metadata.
+- `PropertyInfo` — Stores property type, nullability, validation hints, JSON attribute info, enum references, and modifier-driven
+  overrides. Tests manipulate these heavily in
+  [../../tests/Asynkron.Jsome.Tests/ModifierConfigurationIntegrationTests.cs](../../tests/Asynkron.Jsome.Tests/context.md#configuration--modifier-tests).
+- `EnumInfo` — Describes integer-backed enum generation with optional descriptions and `[EnumMember]` support.
+- `TemplateMetadata` — Reads YAML-style frontmatter from `.hbs` files (`extension`, `description`) so outputs can determine
+  filenames and documentation strings.
 
-Refer to [../Templates/context.md](../Templates/context.md) for the default templates that consume these models and [../Configuration/context.md](../Configuration/context.md) for the rule system that influences property shaping.
+## Constants & Proto Support
+- `ConstantsInfo` (within `ClassInfo`/`PropertyInfo`) and corresponding templates surface string-enum values as static classes.
+- Proto helpers ensure message/enum templates reuse the same metadata as C# outputs; see
+  [../../tests/Asynkron.Jsome.Tests/ProtoTemplateTests.cs](../../tests/Asynkron.Jsome.Tests/context.md#template-extensibility--serialization).
+
+All of these classes depend on the normalized models in [`../Models`](../Models/context.md) and respond to modifiers defined in
+[`../Configuration`](../Configuration/context.md).

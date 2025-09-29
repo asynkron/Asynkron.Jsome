@@ -1,14 +1,32 @@
 # Asynkron.Jsome Test Project
 
-xUnit project validating parser correctness, configuration handling, template rendering, and language feature toggles. The structure resembles Azure Durable Functions' multi-phase testing: unit-level checks for orchestrator logic, integration tests for external definitions, and compilation validation to ensure generated code executes.
+xUnit project validating parser correctness, configuration handling, template rendering, and language feature toggles. The
+structure resembles Azure Durable Functions' multi-phase testing: unit-level checks for orchestrator logic, integration tests for
+external definitions, and compilation validation to ensure generated code executes.
 
-## Test Categories
-- **Code Generation Basics** (`CodeGenerationTests`, `CompilationValidationTests`) — Ensure DTOs/validators compile, required attributes appear, and generated code is syntactically valid.
-- **Configuration & Modifier Tests** (`ConfigurationTests`, `ModifierConfigurationIntegrationTests`, `SchemaValidatorTests`) — Verify `ModifierConfiguration` loading, rule application, and schema path validation. Mirrors Durable Function binding configuration tests.
-- **Template Extensibility** (`CustomTemplateTests`, `ProtoTemplateTests`, `SystemTextJsonTests`) — Guard template selection, proto output, and System.Text.Json enhancements.
-- **Modern C# Features** (`ModernCSharpFeaturesTests`) — Confirm nullable references, `required` keyword, and record generation toggles.
-- **Parser Validation** (`SwaggerParserTests`, `JsonSchemaParserTests`) — Validate error handling and parsing semantics for Swagger documents and JSON Schema directories.
-- **Domain-Specific Integrations** (`OcppV16ComplianceTests`, `OcppV16IntegrationTests`) — Exercise large schema sets from [../../schemas/ocppv16](../../schemas/ocppv16/context.md) to mimic Durable fan-out workloads over many definitions.
-- **Localization / Regression** (`LocaleIssueTest`) — Prevent culture-specific parsing regressions.
+## Test Categories & Files
+- **Code Generation Basics**
+  - `CodeGenerationTests` — DTO/validator emission, enum handling, namespace overrides, and template fallback scenarios.
+  - `CompilationValidationTests` — Runs Roslyn compilation against generated sources to guarantee syntactic validity.
+- **Configuration & Modifier Tests**
+  - `ConfigurationTests` — Round-trips YAML/JSON modifier files through `ConfigurationLoader`.
+  - `ModifierConfigurationIntegrationTests` — Applies property rules during generation to verify inclusion/exclusion behavior.
+  - `SchemaValidatorTests` — Ensures modifier paths map to actual schemas and emits Spectre.Console feedback just like CLI runs.
+- **Template Extensibility & Serialization**
+  - `CustomTemplateTests` — Points the generator at alternate template folders and checks partial template sets.
+  - `ProtoTemplateTests` — Exercises `.proto` frontmatter metadata and extension mapping.
+  - `SystemTextJsonTests` — Validates System.Text.Json attributes/validation when the corresponding CLI switch is enabled.
+- **Modern C# Features**
+  - `ModernCSharpFeaturesTests` — Confirms nullable reference type annotations, `required` keyword usage, and record generation.
+- **Parser Validation**
+  - `SwaggerParserTests` — Guards version checks, error messaging, and summary formatting.
+  - `JsonSchemaParserTests` — Covers directory ingestion, duplicate detection, `$ref` resolution, and malformed schema handling.
+- **Domain-Specific Integrations**
+  - `OcppV16IntegrationTests` — Generates code from [../../../schemas/ocppv16](../../../schemas/ocppv16/context.md) and verifies
+    file counts plus representative validators.
+  - `OcppV16ComplianceTests` — Focuses on enum/constant expectations for OCPP payloads.
+- **Localization / Regression**
+  - `LocaleIssueTest` — Prevents culture-specific parsing regressions (e.g., decimal separators).
 
-Global usings live in `GlobalUsings.cs`, and the project is defined by `Asynkron.Jsome.Tests.csproj`.
+Shared usings live in `GlobalUsings.cs`, and the project definition resides in `Asynkron.Jsome.Tests.csproj`. The suite depends on
+the CLI project at [../../src/Asynkron.Jsome](../../src/Asynkron.Jsome/context.md).

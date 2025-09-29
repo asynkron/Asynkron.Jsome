@@ -1,5 +1,10 @@
 # Test Suite Overview
 
-The `tests` folder contains xUnit-based automated coverage for the generator. All projects target .NET 8 and mirror Azure Durable Functions' emphasis on regression safety—each suite verifies that declarative definitions expand into the expected runtime behavior.
+The `tests` folder mirrors a Durable Functions validation environment: generated artifacts must compile, configuration must bind
+correctly, and large schema workloads must succeed before shipping the CLI. All tests use xUnit and target .NET 8.
 
-- [`Asynkron.Jsome.Tests`](Asynkron.Jsome.Tests/context.md) — Main unit/integration test project.
+- [`Asynkron.Jsome.Tests`](Asynkron.Jsome.Tests/context.md) — Primary test project covering code generation, configuration,
+  parser behaviors, template customizations, proto output, modern C# toggles, and OCPP v1.6 integrations.
+
+The solution ties this project to [`src/Asynkron.Jsome`](../src/Asynkron.Jsome/context.md); workflows under
+[../.github/workflows](../.github/workflows/context.md) execute it on every commit.
