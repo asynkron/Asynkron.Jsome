@@ -7,5 +7,5 @@ Collection of per-message schema files mirroring the Open Charge Point Protocol 
 
 Integration tests in
 [../../../tests/Asynkron.Jsome.Tests/OcppV16IntegrationTests.cs](../../../tests/Asynkron.Jsome.Tests/context.md#domain-specific-integrations)
-and `OcppV16ComplianceTests` rely on this directory. The experience parallels Durable Functions fan-out/fan-in orchestrations over
-a large set of activities, except here the workload is schema ingestion.
+and `OcppV16ComplianceTests` rely on this directory. Expect fan-out/fan-in style workloads because the generator must ingest a
+large set of related schemas.

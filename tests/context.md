@@ -1,6 +1,6 @@
 # Test Suite Overview
 
-The `tests` folder mirrors a Durable Functions validation environment: generated artifacts must compile, configuration must bind
+The `tests` folder exercises the generator end to end: generated artifacts must compile, configuration must bind
 correctly, and large schema workloads must succeed before shipping the CLI. All tests use xUnit and target .NET 8.
 
 - [`Asynkron.Jsome.Tests`](Asynkron.Jsome.Tests/context.md) — Primary test project covering code generation, configuration,

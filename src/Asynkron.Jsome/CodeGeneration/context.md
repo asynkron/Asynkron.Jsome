@@ -1,8 +1,8 @@
 # Code Generation Layer
 
 This folder contains the transformation pipeline that converts `SwaggerDocument` models into strongly-typed output using
-Handlebars templates. Think of it as the Durable Functions "activity" stage: the orchestrator (`Program.cs`) supplies the inputs,
-these classes compute the payloads, and the templates act like output bindings that persist the work.
+Handlebars templates. `Program.cs` supplies inputs, these classes compute the payloads, and the templates persist the results to
+disk.
 
 ## Core Components
 - `CodeGenerator` — Loads template files (respecting custom directories or curated template lists), registers helpers, merges in

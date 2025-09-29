@@ -5,5 +5,4 @@ Quick-start assets demonstrating generator usage:
 - [`Configuration`](Configuration/context.md) — YAML/JSON snippets (`sample-config.yaml`, `sample-config.json`) showcasing
   modifier options such as namespace overrides, inclusion filters, and validation hints.
 
-These samples function like Durable Functions quickstarts: ready-to-run inputs you can feed into the orchestrator (`Program.cs`)
-to understand behavior before applying it to production schemas.
+Use these samples to exercise the generator end to end with minimal setup before applying it to production schemas.

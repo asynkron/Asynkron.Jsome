@@ -1,13 +1,13 @@
 # Generation Configuration
 
-Configuration files let consumers reshape generated types without editing schemas. The pattern parallels Azure Durable Functions'
-binding metadata—external configuration alters execution while the core orchestrator remains untouched.
+Configuration files let consumers reshape generated types without editing schemas. External configuration alters execution while
+the core generator remains untouched.
 
 ## Components
 - `ModifierConfiguration` — Strongly typed representation of configuration files (`global` toggles, per-property `rules`, enum
   handling, default include semantics). Provides helpers to fetch rules, inspect inclusion, and enumerate child paths.
 - `PropertyRule` — Describes overrides for individual property paths (inclusion flags, `renameTo`, `enumType`, `jsonPropertyName`,
-  validation hints like `minLength`/`maxLength`). Acts similarly to Durable retry/time-out policies scoped to activities.
+  validation hints like `minLength`/`maxLength`).
 - `ConfigurationLoader` — Loads YAML or JSON modifier files, autodetects format, handles serialization exceptions, and exposes
   asynchronous/synchronous APIs plus a `Save` helper for writing configurations back to disk.
 - `SchemaValidator` — Validates that modifier paths exist in the merged `SwaggerDocument`, surfaces Spectre.Console tables, and

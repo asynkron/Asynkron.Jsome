@@ -1,8 +1,8 @@
 # Asynkron.Jsome Test Project
 
-xUnit project validating parser correctness, configuration handling, template rendering, and language feature toggles. The
-structure resembles Azure Durable Functions' multi-phase testing: unit-level checks for orchestrator logic, integration tests for
-external definitions, and compilation validation to ensure generated code executes.
+xUnit project validating parser correctness, configuration handling, template rendering, and language feature toggles. The suite
+covers unit-level checks for CLI orchestration, integration tests for external definitions, and compilation validation to ensure
+generated code executes.
 
 ## Test Categories & Files
 - **Code Generation Basics**

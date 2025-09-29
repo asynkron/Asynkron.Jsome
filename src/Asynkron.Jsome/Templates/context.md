@@ -10,4 +10,5 @@ These templates define the textual output for the generator. Each file may start
 - `proto.hbs`, `proto.enum.hbs`, `proto.string_enum.hbs` — Optional Protocol Buffer message/enum renderers.
 - `FSharp.hbs`, `FSharpModule.hbs`, `TypeScript.hbs` — Ancillary templates for alternate target languages.
 
-Templates act like Durable Functions output bindings: they express the shape of generated artifacts while `CodeGenerator` injects runtime metadata from `ClassInfo`/`PropertyInfo` view models.
+Templates express the shape of generated artifacts while `CodeGenerator` injects runtime metadata from `ClassInfo`/`PropertyInfo`
+view models.

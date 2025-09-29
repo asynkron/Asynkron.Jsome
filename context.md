@@ -1,8 +1,8 @@
 # Repository Overview
 
 Asynkron.Jsome ships as a .NET 8 global tool (`dotnet-jsome`) that ingests Swagger 2.0 or loose JSON Schema files and emits
-C#/Proto code via Handlebars templates. Think of the repo as a Durable Functions app in miniature: the CLI orchestrator lives in
-`src`, configuration/inputs mimic bindings, and the tests/automation guarantee each orchestration run stays deterministic.
+C#/Proto code via Handlebars templates. The repository is organized around that pipeline: the CLI host lives in `src`, supporting
+inputs sit beside it, and the tests/automation keep the entire flow deterministic.
 
 ## Top-Level Map
 - [`src`](src/context.md) — Production code. `Asynkron.Jsome` is the sole project and contains the CLI host, parsers, code
@@ -22,7 +22,7 @@ C#/Proto code via Handlebars templates. Think of the repo as a Durable Functions
 
 ## Quick Entry Points
 - Start at [`src/Asynkron.Jsome/Program.cs`](src/Asynkron.Jsome/context.md#entry-points) for CLI wiring and option handling.
-- Follow the Durable-like flow through the parser layers
+- Follow the end-to-end flow through the parser layers
   ([`SwaggerParser`](src/Asynkron.Jsome/context.md#entry-points),
   [`JsonSchemaParser`](src/Asynkron.Jsome/context.md#entry-points)), configuration modifiers
   ([`Configuration`](src/Asynkron.Jsome/Configuration/context.md)), generation activities

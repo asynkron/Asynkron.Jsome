@@ -1,8 +1,7 @@
 # Swagger Domain Models
 
 `Models` defines the in-memory structures that both parsers and generators operate on. They provide a simplified Swagger 2.0
-object graph (info, paths, parameters, schemas) analogous to Durable Functions' durable entity state—centralized objects that
-capture contract definitions for later execution.
+object graph (info, paths, parameters, schemas) that centralizes contract definitions for later stages of the pipeline.
 
 ## Type Breakdown
 - `SwaggerDocument` — Root aggregate containing metadata (`Info`), host/base path, schemes, `Definitions`, and path items.
